@@ -1,0 +1,319 @@
+//! MCP server runtime: stdio loop and per-method handlers.
+
+use std::sync::Arc;
+
+use ferridis_client::Client;
+use ferridis_core::{CapabilityRef, IntentVerb};
+use serde_json::json;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
+use tracing::{error, info, warn};
+
+use crate::protocol::{
+    ContentPart, Inbound, InitializeResult, PROTOCOL_VERSION, Response, SERVER_NAME, SERVER_VERSION,
+    ServerCapabilities, ServerInfo, Tool, ToolsCallParams, ToolsCallResult, ToolsCapability,
+    ToolsListResult, codes,
+};
+use crate::tools::ToolCatalogue;
+
+/// Long-lived server state.
+pub struct Server {
+    client: Arc<Client>,
+    catalogue: ToolCatalogue,
+    /// Set when the client sends `initialize`.
+    initialized: std::sync::Mutex<bool>,
+}
+
+impl Server {
+    pub fn new(client: Arc<Client>, catalogue: ToolCatalogue) -> Self {
+        Self {
+            client,
+            catalogue,
+            initialized: std::sync::Mutex::new(false),
+        }
+    }
+
+    /// Drive the stdio loop until EOF.
+    pub async fn serve_stdio(self: Arc<Self>) {
+        let stdin = tokio::io::stdin();
+        let stdout = tokio::io::stdout();
+        let mut reader = BufReader::new(stdin).lines();
+        let mut writer = BufWriter::new(stdout);
+
+        loop {
+            let line = match reader.next_line().await {
+                Ok(Some(l)) => l,
+                Ok(None) => {
+                    info!("stdin closed, exiting");
+                    break;
+                }
+                Err(e) => {
+                    error!(error = %e, "stdin read failed");
+                    break;
+                }
+            };
+
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            let parsed: Result<Inbound, _> = serde_json::from_str(&line);
+            match parsed {
+                Ok(msg) if !msg.is_valid() => {
+                    let id = msg.id.clone().unwrap_or(serde_json::Value::Null);
+                    let response = Response::error(
+                        id,
+                        codes::INVALID_REQUEST,
+                        "jsonrpc field must be \"2.0\"",
+                    );
+                    if let Err(e) = write_response(&mut writer, &response).await {
+                        error!(error = %e, "stdout write failed");
+                        break;
+                    }
+                }
+                Ok(msg) if msg.is_notification() => {
+                    self.handle_notification(&msg).await;
+                }
+                Ok(msg) => {
+                    let response = self.handle_request(msg).await;
+                    if let Err(e) = write_response(&mut writer, &response).await {
+                        error!(error = %e, "stdout write failed");
+                        break;
+                    }
+                }
+                Err(e) => {
+                    let response = Response::error(
+                        serde_json::Value::Null,
+                        codes::PARSE_ERROR,
+                        format!("parse error: {e}"),
+                    );
+                    if let Err(e) = write_response(&mut writer, &response).await {
+                        error!(error = %e, "stdout write failed");
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Dispatch one parsed notification. Public to the crate so
+    /// alternate transports (e.g., the HTTP transport) can route to
+    /// the same handler the stdio loop uses.
+    pub(crate) async fn handle_notification(&self, msg: &Inbound) {
+        match msg.method.as_str() {
+            "notifications/initialized" => {
+                *self.initialized.lock().expect("mutex") = true;
+                info!("client signaled initialized");
+            }
+            other => {
+                warn!(method = %other, "ignoring unknown notification");
+            }
+        }
+    }
+
+    /// Dispatch one parsed request and return the response. Public to
+    /// the crate so alternate transports (e.g., the HTTP transport)
+    /// can route to the same handler the stdio loop uses.
+    pub(crate) async fn handle_request(&self, msg: Inbound) -> Response {
+        let id = msg.id.clone().unwrap_or(serde_json::Value::Null);
+        match msg.method.as_str() {
+            "initialize" => self.handle_initialize(id).await,
+            "ping" => Response::success(id, json!({})),
+            "tools/list" => self.handle_tools_list(id).await,
+            "tools/call" => self.handle_tools_call(id, msg.params).await,
+            other => {
+                warn!(method = %other, "method not found");
+                Response::error(id, codes::METHOD_NOT_FOUND, format!("unknown method: {other}"))
+            }
+        }
+    }
+
+    async fn handle_initialize(&self, id: serde_json::Value) -> Response {
+        let result = InitializeResult {
+            protocol_version: PROTOCOL_VERSION,
+            capabilities: ServerCapabilities {
+                tools: ToolsCapability::default(),
+            },
+            server_info: ServerInfo {
+                name: SERVER_NAME,
+                version: SERVER_VERSION,
+            },
+        };
+        Response::success(
+            id,
+            serde_json::to_value(result).expect("InitializeResult serializes"),
+        )
+    }
+
+    async fn handle_tools_list(&self, id: serde_json::Value) -> Response {
+        let tools: Vec<Tool> = self.catalogue.tools().to_vec();
+        let result = ToolsListResult { tools };
+        Response::success(
+            id,
+            serde_json::to_value(result).expect("ToolsListResult serializes"),
+        )
+    }
+
+    async fn handle_tools_call(
+        &self,
+        id: serde_json::Value,
+        params: serde_json::Value,
+    ) -> Response {
+        let call: ToolsCallParams = match serde_json::from_value(params) {
+            Ok(v) => v,
+            Err(e) => {
+                return Response::error(
+                    id,
+                    codes::INVALID_PARAMS,
+                    format!("invalid tools/call params: {e}"),
+                );
+            }
+        };
+
+        let Some((capability, intent)) = self.catalogue.resolve(&call.name).cloned() else {
+            return Response::error(
+                id,
+                codes::METHOD_NOT_FOUND,
+                format!("unknown tool: {}", call.name),
+            );
+        };
+
+        info!(
+            tool = %call.name,
+            capability = %capability,
+            intent = %intent,
+            "tools/call dispatch"
+        );
+
+        match self.dispatch(&capability, intent, call.arguments).await {
+            Ok(body) => {
+                let text = serde_json::to_string_pretty(&body).unwrap_or_else(|_| body.to_string());
+                let result = ToolsCallResult {
+                    content: vec![ContentPart::Text { text }],
+                    is_error: None,
+                };
+                Response::success(
+                    id,
+                    serde_json::to_value(result).expect("ToolsCallResult serializes"),
+                )
+            }
+            Err(e) => {
+                // MCP convention: surface dispatch failures as a `tools/call`
+                // result with `isError: true` and the message in content,
+                // not as a JSON-RPC error. That lets the model see and
+                // potentially recover from the failure.
+                let result = ToolsCallResult {
+                    content: vec![ContentPart::Text {
+                        text: format!("Ferridis dispatch failed: {e}"),
+                    }],
+                    is_error: Some(true),
+                };
+                Response::success(
+                    id,
+                    serde_json::to_value(result).expect("ToolsCallResult serializes"),
+                )
+            }
+        }
+    }
+
+    async fn dispatch(
+        &self,
+        capability: &CapabilityRef,
+        intent: IntentVerb,
+        arguments: serde_json::Value,
+    ) -> Result<serde_json::Value, ferridis_client::ClientError> {
+        // Normalize: MCP `arguments` may be omitted; pass through as `null`
+        // turned into an empty object so adapters that expect an object
+        // shape don't reject.
+        let body = if arguments.is_null() {
+            serde_json::json!({})
+        } else {
+            arguments
+        };
+
+        // Branch by intent kind: MCP 2024-11-05 has no progressive
+        // streaming on `tools/call`, so stream-kind intents are
+        // collected here and surfaced as a single response. The
+        // primary text content is the final `result.result` field
+        // when the upstream adapter emits one (the shape the
+        // Claude-CLI adapter follows); chunks beyond that are
+        // bundled as JSON so a structured-aware client can inspect
+        // them. When MCP gains notifications-as-chunks, this is the
+        // call site that grows progressive forwarding.
+        let kind = {
+            let registry = self.client.registry().lock().await;
+            registry
+                .get(capability)
+                .map(|r| r.manifest().intent_kind(&intent))
+                .unwrap_or(ferridis_core::IntentKind::Request)
+        };
+
+        match kind {
+            ferridis_core::IntentKind::Request => {
+                self.client.dispatch(capability, intent, body).await
+            }
+            ferridis_core::IntentKind::Stream => {
+                use futures_util::StreamExt;
+                let mut stream = self
+                    .client
+                    .dispatch_streaming(capability, intent, body)
+                    .await?;
+                let mut chunks: Vec<serde_json::Value> = Vec::new();
+                while let Some(item) = stream.next().await {
+                    chunks.push(item?);
+                }
+                // Pick the most useful "primary" text: the last
+                // chunk's `result.result` if any, else the
+                // concatenated assistant text, else fall back to
+                // the chunk-count summary.
+                let final_text = chunks
+                    .iter()
+                    .rev()
+                    .find_map(|c| {
+                        if c.get("type")? == "result" {
+                            c.get("result")?.as_str().map(str::to_string)
+                        } else {
+                            None
+                        }
+                    })
+                    .or_else(|| {
+                        let mut acc = String::new();
+                        for c in &chunks {
+                            if c.get("type") != Some(&serde_json::Value::String("assistant".into())) {
+                                continue;
+                            }
+                            if let Some(content) = c
+                                .pointer("/message/content")
+                                .and_then(|v| v.as_array())
+                            {
+                                for part in content {
+                                    if part.get("type") == Some(&serde_json::Value::String("text".into()))
+                                        && let Some(t) = part.get("text").and_then(|v| v.as_str())
+                                    {
+                                        acc.push_str(t);
+                                    }
+                                }
+                            }
+                        }
+                        if acc.is_empty() { None } else { Some(acc) }
+                    })
+                    .unwrap_or_else(|| format!("(stream produced {} chunks with no result text)", chunks.len()));
+
+                Ok(serde_json::json!({
+                    "result": final_text,
+                    "chunks": chunks,
+                }))
+            }
+        }
+    }
+}
+
+async fn write_response(
+    writer: &mut BufWriter<tokio::io::Stdout>,
+    response: &Response,
+) -> std::io::Result<()> {
+    let s = serde_json::to_string(response).expect("Response serializes");
+    writer.write_all(s.as_bytes()).await?;
+    writer.write_all(b"\n").await?;
+    writer.flush().await?;
+    Ok(())
+}

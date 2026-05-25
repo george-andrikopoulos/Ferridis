@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 726 175" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="rl-t">
+  <title id="rl-t">Registry lookup: intent queries Personal mesh first, then Org mesh, then Public mesh. First match wins; conflicts surfaced with provenance.</title>
+  <defs>
+    <marker id="a" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+      <polygon points="0,0 7,2.5 0,5" fill="#94A3B8"/>
+    </marker>
+  </defs>
+  <rect width="726" height="175" fill="#F8FAFC"/>
+
+  <!-- N1: intent input -->
+  <rect x="6" y="22" width="122" height="78" rx="7" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="67" y="61" text-anchor="middle" dominant-baseline="middle" font-family="ui-monospace,'JetBrains Mono','Fira Code',monospace" font-size="12" font-weight="600" fill="#0F172A">intent: calendar</text>
+
+  <!-- C1: 1st -->
+  <line x1="129" y1="61" x2="179" y2="61" stroke="#CBD5E1" stroke-width="1" marker-end="url(#a)"/>
+  <text x="154" y="50" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" letter-spacing="0.04em" fill="#94A3B8">1st</text>
+
+  <!-- N2: Personal mesh (purple accent) -->
+  <rect x="181" y="22" width="138" height="78" rx="7" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="181" y="22" width="4" height="78" rx="2" fill="#7C3AED"/>
+  <text x="252" y="49" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#7C3AED">Personal mesh</text>
+  <text x="252" y="65" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">connection wallet</text>
+  <text x="252" y="79" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">user-controlled</text>
+
+  <!-- C2: miss → 2nd -->
+  <line x1="320" y1="61" x2="374" y2="61" stroke="#CBD5E1" stroke-width="1" marker-end="url(#a)"/>
+  <text x="347" y="50" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" letter-spacing="0.04em" fill="#94A3B8">miss &#x2192; 2nd</text>
+
+  <!-- N3: Org mesh (orange accent) -->
+  <rect x="376" y="22" width="134" height="78" rx="7" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="376" y="22" width="4" height="78" rx="2" fill="#EA580C"/>
+  <text x="446" y="49" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#EA580C">Org mesh</text>
+  <text x="446" y="65" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">company-hosted</text>
+  <text x="446" y="79" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">SSO / SCIM trust</text>
+
+  <!-- C3: miss → 3rd -->
+  <line x1="511" y1="61" x2="563" y2="61" stroke="#CBD5E1" stroke-width="1" marker-end="url(#a)"/>
+  <text x="537" y="50" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" letter-spacing="0.04em" fill="#94A3B8">miss &#x2192; 3rd</text>
+
+  <!-- N4: Public mesh (blue accent) -->
+  <rect x="565" y="22" width="148" height="78" rx="7" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="565" y="22" width="4" height="78" rx="2" fill="#1D4ED8"/>
+  <text x="642" y="49" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#1D4ED8">Public mesh</text>
+  <text x="642" y="65" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">federated &#xB7; curated</text>
+  <text x="642" y="79" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">signed manifests</text>
+
+  <!-- Down arrow to footer -->
+  <line x1="363" y1="100" x2="363" y2="118" stroke="#CBD5E1" stroke-width="1" marker-end="url(#a)"/>
+
+  <!-- Footer note -->
+  <rect x="116" y="118" width="494" height="34" rx="6" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="363" y="135" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#475569">first match wins &#xB7; conflicts surfaced with provenance</text>
+</svg>

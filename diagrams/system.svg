@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 800 740" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sys-title sys-desc">
+  <title id="sys-title">Ferridis — System diagram v0.6</title>
+  <desc id="sys-desc">System architecture showing three AI panels (Claude Code, GitHub Copilot Chat, Zed AI) flowing through editor integrations and shim binaries, converging at ferridis-client, crossing one HTTPS wire boundary to the adapter layer, with ferridis-core as the shared foundation.</desc>
+
+  <!-- Background -->
+  <rect width="800" height="740" fill="#0D1117"/>
+
+  <!-- Header -->
+  <text x="400" y="26" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,-apple-system,Helvetica,sans-serif"
+        font-size="15" font-weight="700" letter-spacing="-0.3" fill="#C9D1D9">
+    Ferridis — System diagram v0.6
+  </text>
+  <text x="400" y="42" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#8B949E">
+    Three AI panels · One Rust code path · One wire boundary · One discovery broker
+  </text>
+
+  <!-- ══════════════════════════════════════
+       Zone 1: AI Surfaces   y=52–132
+       ══════════════════════════════════════ -->
+  <rect x="16" y="52" width="768" height="80" rx="7" fill="#111820" stroke="#21262D" stroke-width="1"/>
+  <text x="26" y="67"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" font-weight="700"
+        fill="#484F58" letter-spacing="0.8">AI SURFACES</text>
+
+  <!-- Claude Code -->
+  <rect x="24"  y="72" width="242" height="52" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="24"  y="72" width="3"   height="52" rx="1.5" fill="#BC8CFF"/>
+  <text x="34"  y="91" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" font-weight="700" fill="#BC8CFF">Claude Code</text>
+  <text x="34"  y="106" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">MCP-native · VS Code</text>
+  <rect x="34"  y="112" width="54" height="10" rx="5" fill="#2D1F4A"/>
+  <text x="61"  y="120" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#BC8CFF">MCP stdio</text>
+
+  <!-- GitHub Copilot Chat -->
+  <rect x="274" y="72" width="242" height="52" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="274" y="72" width="3"   height="52" rx="1.5" fill="#BC8CFF"/>
+  <text x="284" y="91" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" font-weight="700" fill="#BC8CFF">GitHub Copilot Chat</text>
+  <text x="284" y="106" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">vscode.lm tools · VS Code</text>
+  <rect x="284" y="112" width="48" height="10" rx="5" fill="#2D1F4A"/>
+  <text x="308" y="120" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#BC8CFF">tool call</text>
+
+  <!-- Zed AI -->
+  <rect x="524" y="72" width="242" height="52" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="524" y="72" width="3"   height="52" rx="1.5" fill="#BC8CFF"/>
+  <text x="534" y="91" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" font-weight="700" fill="#BC8CFF">Zed AI</text>
+  <text x="534" y="106" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">Native AI panel · Zed</text>
+  <rect x="534" y="112" width="48" height="10" rx="5" fill="#2D1F4A"/>
+  <text x="558" y="120" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#BC8CFF">tool call</text>
+
+  <!-- connector -->
+  <text x="400" y="143" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#484F58">via shims ↓</text>
+
+  <!-- ══════════════════════════════════════
+       Zone 2: Shim Binaries   y=150–232
+       ══════════════════════════════════════ -->
+  <rect x="16" y="150" width="768" height="82" rx="7" fill="#111820" stroke="#21262D" stroke-width="1"/>
+  <text x="26" y="165"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" font-weight="700"
+        fill="#484F58" letter-spacing="0.8">EDITOR INTEGRATIONS · SHIM BINARIES</text>
+
+  <!-- VS Code extension -->
+  <rect x="24"  y="170" width="178" height="54" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="24"  y="170" width="3"   height="54" rx="1.5" fill="#58A6FF"/>
+  <text x="34"  y="187" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" font-weight="700" fill="#58A6FF">VS Code extension</text>
+  <text x="34"  y="201" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">editors/vscode/ · TypeScript</text>
+  <rect x="34"  y="209" width="48" height="10" rx="5" fill="#0E1E3A"/>
+  <text x="58"  y="217" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#58A6FF">vscode.lm</text>
+
+  <!-- Zed extension -->
+  <rect x="210" y="170" width="178" height="54" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="210" y="170" width="3"   height="54" rx="1.5" fill="#58A6FF"/>
+  <text x="220" y="187" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" font-weight="700" fill="#58A6FF">Zed extension</text>
+  <text x="220" y="201" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">editors/zed/ · Rust→wasm</text>
+  <rect x="220" y="209" width="64" height="10" rx="5" fill="#0E1E3A"/>
+  <text x="252" y="217" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#58A6FF">context server</text>
+
+  <!-- ferridis-mcp-server -->
+  <rect x="396" y="170" width="204" height="54" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="396" y="170" width="3"   height="54" rx="1.5" fill="#58A6FF"/>
+  <text x="406" y="187" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#58A6FF">ferridis-mcp-server</text>
+  <text x="406" y="201" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">MCP 2024-11-05 · OAuth 2.1+DCR</text>
+  <rect x="406" y="209" width="60" height="10" rx="5" fill="#0E1E3A"/>
+  <text x="436" y="217" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#58A6FF">publisher shim</text>
+
+  <!-- ferridis-cli -->
+  <rect x="608" y="170" width="158" height="54" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="608" y="170" width="3"   height="54" rx="1.5" fill="#58A6FF"/>
+  <text x="618" y="187" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#58A6FF">ferridis-cli</text>
+  <text x="618" y="201" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">JSON-RPC 2.0 · stdio</text>
+  <rect x="618" y="209" width="58" height="10" rx="5" fill="#0E1E3A"/>
+  <text x="647" y="217" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#58A6FF">stdio sidecar</text>
+
+  <!-- connector -->
+  <text x="400" y="243" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#484F58">converge ↓</text>
+
+  <!-- ══════════════════════════════════════
+       Zone 3: Convergence + Discovery   y=250–350
+       ══════════════════════════════════════ -->
+  <rect x="16" y="250" width="768" height="100" rx="7" fill="#0E1E3A" stroke="#1F6FEB" stroke-width="1"/>
+  <text x="26" y="265"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" font-weight="700"
+        fill="#3B82F6" letter-spacing="0.8">CONVERGENCE POINT · CONSUMER-SIDE RUST</text>
+
+  <!-- ferridis-client -->
+  <rect x="24"  y="270" width="548" height="72" rx="5" fill="#0A152A" stroke="#1F6FEB" stroke-width="1.2"/>
+  <rect x="24"  y="270" width="3"   height="72" rx="1.5" fill="#58A6FF"/>
+  <text x="34"  y="288" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#58A6FF">ferridis-client</text>
+  <text x="34"  y="303" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">OS-keychain wallet · three-tier registry · auth-aware dispatch · schema-driven validation</text>
+  <text x="34"  y="316" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">MCP consumer (stdio + SSE, auto-recovery) · federated mesh · mDNS scanner</text>
+  <rect x="34"  y="324" width="38" height="10" rx="5" fill="#0D2145"/>
+  <text x="53"  y="332" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#58A6FF">wallet</text>
+  <rect x="79"  y="324" width="44" height="10" rx="5" fill="#0D2145"/>
+  <text x="101" y="332" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#58A6FF">registry</text>
+  <rect x="130" y="324" width="72" height="10" rx="5" fill="#0D2145"/>
+  <text x="166" y="332" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#58A6FF">intent resolver</text>
+  <rect x="209" y="324" width="52" height="10" rx="5" fill="#0D2145"/>
+  <text x="235" y="332" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#58A6FF">dispatch</text>
+  <rect x="268" y="324" width="72" height="10" rx="5" fill="#0D2145"/>
+  <text x="304" y="332" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#58A6FF">MCP consumer</text>
+
+  <!-- Discovery: broker -->
+  <rect x="582" y="270" width="194" height="34" rx="5" fill="#0A2218" stroke="#3FB950" stroke-width="1"/>
+  <rect x="582" y="270" width="3"   height="34" rx="1.5" fill="#3FB950"/>
+  <text x="592" y="284" font-family="ui-monospace,monospace" font-size="9" font-weight="700" fill="#3FB950">ferridis-discovery-broker</text>
+  <text x="592" y="297" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">HTTP 127.0.0.1:7825 · SSE push · Pinned|Ephemeral</text>
+
+  <!-- Discovery: bridge -->
+  <rect x="582" y="310" width="194" height="32" rx="5" fill="#0A2218" stroke="#3FB950" stroke-width="1"/>
+  <rect x="582" y="310" width="3"   height="32" rx="1.5" fill="#3FB950"/>
+  <text x="592" y="324" font-family="ui-monospace,monospace" font-size="9" font-weight="700" fill="#3FB950">ferridis-stdio-bridge</text>
+  <text x="592" y="336" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">stdio MCP → HTTP SSE · :7826</text>
+
+  <!-- connector -->
+  <text x="400" y="361" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#484F58">HTTPS wire boundary ↓</text>
+
+  <!-- ══════════════════════════════════════
+       Zone 4: Wire Layer   y=368–440
+       ══════════════════════════════════════ -->
+  <rect x="16" y="368" width="768" height="72" rx="7" fill="#111820" stroke="#21262D" stroke-width="1"/>
+  <text x="26" y="383"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" font-weight="700"
+        fill="#484F58" letter-spacing="0.8">WIRE LAYER</text>
+  <rect x="24" y="388" width="752" height="44" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="24" y="388" width="3"   height="44" rx="1.5" fill="#58A6FF"/>
+  <text x="34" y="406" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#58A6FF">ferridis-protocol</text>
+  <text x="34" y="421" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">HTTP · OAuth 2.0+PKCE · manifest/schema fetch · Sigstore + CRL revocation · SSE streaming · WebSocket bidi · mDNS · federated mesh</text>
+
+  <!-- ══════════════════════════════════════
+       Zone 5: Publisher Framework   y=450–522
+       ══════════════════════════════════════ -->
+  <rect x="16" y="450" width="768" height="72" rx="7" fill="#111820" stroke="#21262D" stroke-width="1"/>
+  <text x="26" y="465"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" font-weight="700"
+        fill="#484F58" letter-spacing="0.8">PUBLISHER FRAMEWORK</text>
+  <rect x="24" y="470" width="752" height="44" rx="5" fill="#1C2128" stroke="#F0883E" stroke-width="1"/>
+  <rect x="24" y="470" width="3"   height="44" rx="1.5" fill="#F0883E"/>
+  <text x="34" y="488" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#F0883E">ferridis-adapter-sdk</text>
+  <text x="34" y="503" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">Capability trait · axum AdapterServer · IntentKind routing (Request→JSON / Stream→SSE) · EventPublisher · BrokerRegistration RAII (240 s)</text>
+
+  <!-- ══════════════════════════════════════
+       Zone 6: Concrete Adapters   y=532–640
+       ══════════════════════════════════════ -->
+  <rect x="16" y="532" width="768" height="108" rx="7" fill="#111820" stroke="#21262D" stroke-width="1"/>
+  <text x="26" y="547"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" font-weight="700"
+        fill="#484F58" letter-spacing="0.8">CONCRETE ADAPTERS</text>
+
+  <!-- adapter-fs (x=24, w=118) -->
+  <rect x="24"  y="552" width="118" height="80" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="24"  y="552" width="3"   height="80" rx="1.5" fill="#F0883E"/>
+  <text x="34"  y="568" font-family="ui-monospace,monospace" font-size="9" font-weight="700" fill="#F0883E">adapter-fs</text>
+  <text x="34"  y="581" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">read · write · list</text>
+  <text x="34"  y="593" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">search · move</text>
+  <text x="34"  y="605" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">Root+RelPath</text>
+  <text x="34"  y="617" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">typestate</text>
+
+  <!-- adapter-claude-cli (x=150, w=118) -->
+  <rect x="150" y="552" width="118" height="80" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="150" y="552" width="3"   height="80" rx="1.5" fill="#F0883E"/>
+  <text x="160" y="568" font-family="ui-monospace,monospace" font-size="8" font-weight="700" fill="#F0883E">adapter-claude-cli</text>
+  <text x="160" y="581" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">submit-prompt</text>
+  <text x="160" y="593" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">resume-session</text>
+  <text x="160" y="605" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">stream-kind SSE</text>
+
+  <!-- adapter-google-calendar (x=276, w=118) -->
+  <rect x="276" y="552" width="118" height="80" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="276" y="552" width="3"   height="80" rx="1.5" fill="#F0883E"/>
+  <text x="286" y="568" font-family="ui-monospace,monospace" font-size="8" font-weight="700" fill="#F0883E">adapter-google-cal</text>
+  <text x="286" y="581" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">6 intents</text>
+  <text x="286" y="593" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">list · get · create</text>
+  <text x="286" y="605" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">update · delete</text>
+
+  <!-- adapter-slack (x=402, w=118) -->
+  <rect x="402" y="552" width="118" height="80" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="402" y="552" width="3"   height="80" rx="1.5" fill="#F0883E"/>
+  <text x="412" y="568" font-family="ui-monospace,monospace" font-size="9" font-weight="700" fill="#F0883E">adapter-slack</text>
+  <text x="412" y="581" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">6 intents</text>
+  <text x="412" y="593" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">channels · post</text>
+  <text x="412" y="605" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">get-msgs · dm</text>
+
+  <!-- adapter-github (x=528, w=118) -->
+  <rect x="528" y="552" width="118" height="80" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="528" y="552" width="3"   height="80" rx="1.5" fill="#F0883E"/>
+  <text x="538" y="568" font-family="ui-monospace,monospace" font-size="9" font-weight="700" fill="#F0883E">adapter-github</text>
+  <text x="538" y="581" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">6 intents</text>
+  <text x="538" y="593" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">repos · issues</text>
+  <text x="538" y="605" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">PRs · files</text>
+
+  <!-- adapter-notion (x=654, w=118) -->
+  <rect x="654" y="552" width="118" height="80" rx="5" fill="#1C2128" stroke="#30363D" stroke-width="1"/>
+  <rect x="654" y="552" width="3"   height="80" rx="1.5" fill="#F0883E"/>
+  <text x="664" y="568" font-family="ui-monospace,monospace" font-size="9" font-weight="700" fill="#F0883E">adapter-notion</text>
+  <text x="664" y="581" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">6 intents</text>
+  <text x="664" y="593" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">databases · pages</text>
+  <text x="664" y="605" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#8B949E">query · search</text>
+
+  <!-- ══════════════════════════════════════
+       Zone 7: Foundation   y=648–720
+       ══════════════════════════════════════ -->
+  <rect x="16" y="648" width="768" height="72" rx="7" fill="#0E1E3A" stroke="#1F6FEB" stroke-width="1" stroke-dasharray="4 2"/>
+  <text x="26" y="663"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" font-weight="700"
+        fill="#3B82F6" letter-spacing="0.8">FOUNDATION · PURE TYPES · NO I/O · USED BY EVERY CRATE ABOVE</text>
+  <rect x="24" y="668" width="752" height="44" rx="5" fill="#0A152A" stroke="#1F6FEB" stroke-width="1"/>
+  <rect x="24" y="668" width="3"   height="44" rx="1.5" fill="#1F6FEB"/>
+  <text x="34" y="686" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#58A6FF">ferridis-core</text>
+  <text x="34" y="701" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#8B949E">Connection&lt;S&gt; typestate (Pending|Authorized|Expired|Revoked) · Manifest · IntentVerb · Tier · AccessToken · EventChannel · no unsafe · Rust 1.95</text>
+
+  <!-- Footer -->
+  <text x="400" y="730" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#484F58">
+    Ferridis v0.6 · George Andrikopoulos · Apache 2.0
+  </text>
+</svg>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 580 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="tp-t">
+  <title id="tp-t">Tier precedence: native connection checked first, then browser session, then computer-use vision. Tier used is logged on every call.</title>
+  <defs>
+    <marker id="a" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+      <polygon points="0,0 7,2.5 0,5" fill="#94A3B8"/>
+    </marker>
+  </defs>
+  <rect width="580" height="400" fill="#F8FAFC"/>
+
+  <!-- Goal box -->
+  <rect x="190" y="15" width="200" height="40" rx="7" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="290" y="35" text-anchor="middle" dominant-baseline="middle" font-family="ui-monospace,'JetBrains Mono','Fira Code',monospace" font-size="13" font-weight="600" fill="#0F172A">goal: send-message</text>
+
+  <!-- Goal → D1 -->
+  <line x1="290" y1="55" x2="290" y2="76" stroke="#CBD5E1" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- Decision 1 pill -->
+  <rect x="165" y="76" width="250" height="36" rx="18" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="290" y="94" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#475569">native connection available?</text>
+
+  <!-- D1 left "yes" branch — elbow left then down -->
+  <path d="M 165,94 H 110 V 171" fill="none" stroke="#CBD5E1" stroke-width="1" marker-end="url(#a)"/>
+  <text x="136" y="88" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" font-weight="700" fill="#16A34A">yes</text>
+
+  <!-- D1 right "no" branch — slight right shift then down to D2 -->
+  <path d="M 415,94 H 400 V 151" fill="none" stroke="#CBD5E1" stroke-width="1" marker-end="url(#a)"/>
+  <text x="430" y="88" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" font-weight="600" fill="#94A3B8">no</text>
+
+  <!-- Tier 1: Native (green) -->
+  <rect x="50" y="171" width="120" height="74" rx="7" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1"/>
+  <text x="110" y="196" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#15803D">Tier 1 &#xB7; Native</text>
+  <text x="110" y="212" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">fastest</text>
+  <text x="110" y="226" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">structured data</text>
+
+  <!-- Decision 2 pill -->
+  <rect x="290" y="151" width="220" height="32" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="400" y="167" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#475569">browser session available?</text>
+
+  <!-- D2 left "yes" branch — down -->
+  <line x1="330" y1="183" x2="330" y2="217" stroke="#CBD5E1" stroke-width="1" marker-end="url(#a)"/>
+  <text x="318" y="207" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" font-weight="700" fill="#D97706">yes</text>
+
+  <!-- D2 right "no" branch — down -->
+  <line x1="470" y1="183" x2="470" y2="217" stroke="#CBD5E1" stroke-width="1" marker-end="url(#a)"/>
+  <text x="484" y="207" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" font-weight="600" fill="#94A3B8">no</text>
+
+  <!-- Tier 2: Browser session (amber) -->
+  <rect x="274" y="217" width="112" height="74" rx="7" fill="#FFFBEB" stroke="#FDE68A" stroke-width="1"/>
+  <text x="330" y="240" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#B45309">Tier 2</text>
+  <text x="330" y="256" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">Browser session</text>
+  <text x="330" y="270" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">uses existing login</text>
+
+  <!-- Tier 3: Computer-use vision (orange) -->
+  <rect x="412" y="217" width="118" height="74" rx="7" fill="#FFF7ED" stroke="#FED7AA" stroke-width="1"/>
+  <text x="471" y="240" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#C2410C">Tier 3</text>
+  <text x="471" y="256" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">Computer-use vision</text>
+  <text x="471" y="270" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#64748B">last resort</text>
+
+  <!-- Down arrow to footer -->
+  <line x1="295" y1="291" x2="295" y2="318" stroke="#CBD5E1" stroke-width="1" marker-end="url(#a)"/>
+
+  <!-- Footer note (dashed) -->
+  <rect x="130" y="318" width="330" height="34" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="295" y="335" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#64748B">tier-used logged on every call</text>
+</svg>

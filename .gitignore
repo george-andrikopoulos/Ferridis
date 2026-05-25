@@ -1,0 +1,69 @@
+# Rust build artifacts
+rust/target/
+target/
+**/*.rs.bk
+
+# Editor / OS detritus
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE state
+.idea/
+.vscode/
+.zed/
+
+# Local env / secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*-credentials.json
+secrets/
+
+# Logs and traces
+*.log
+
+# Node / VS Code extension build artifacts
+node_modules/
+editors/vscode/out/
+editors/vscode/*.vsix
+
+# Zed extension build artifacts
+editors/zed/target/
+editors/zed/Cargo.lock
+editors/zed/extension.wasm
+
+# LinkedIn brand / content — internal working files, not public
+linkedin-launch-sequence.md
+linkedin-tracking.md
+linkedin-posts/
+
+# Pre-launch internal notes — landscape corrections, reframing rationale
+pre-launch-corrections.md
+
+# AAIF vocabulary submission — draft not ready for public review
+aaif-vocabulary-discussion.md
+
+# Generated build artifacts
+ferridis-carousel-post1-v2.pdf
+*.pdf
+
+# Cowork / local tooling — session-specific, no value to contributors
+install-ui-ux-skill.sh
+
+# Website / infrastructure — server config, Cloudflare tunnel, landing page HTML;
+# self-hosted, no value to contributors
+website/
+
+# Interactive HTML diagram — replaced by diagrams/system.svg for GitHub rendering
+diagrams/system.html
+
+# Internal agentic planning docs — working notes, not contributor material
+docs/superpowers/
+
+# Internal agent markers and AI orientation files
+.no-tdd-gate
+CLAUDE.md

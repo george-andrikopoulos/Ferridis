@@ -1,0 +1,36 @@
+[package]
+name = "ferridis-adapter-claude-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Ferridis adapter wrapping the Claude Code CLI as a stream-kind capability. Stopgap for remote-controlling Claude Code while editor agent panels (Zed, etc.) lack a public extension API for their assistant surface."
+
+[dependencies]
+ferridis-core = { workspace = true }
+ferridis-adapter-sdk = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+url = { workspace = true }
+
+tokio = { workspace = true }
+async-trait = { workspace = true }
+async-stream = "0.3"
+futures-util = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+tempfile = { workspace = true }
+reqwest = { workspace = true }
+futures-util = { workspace = true }
+axum = { workspace = true }
+bytes = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[[example]]
+name = "serve"
+path = "examples/serve.rs"

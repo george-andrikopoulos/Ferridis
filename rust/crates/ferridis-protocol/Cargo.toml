@@ -1,0 +1,45 @@
+[package]
+name = "ferridis-protocol"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Wire-layer transport for the Ferridis protocol: HTTP, OAuth 2.0+PKCE, manifest and schema fetching, bearer-token calls."
+
+[dependencies]
+ferridis-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+time = { workspace = true }
+url = { workspace = true }
+uuid = { workspace = true }
+secrecy = { workspace = true }
+
+tokio = { workspace = true }
+reqwest = { workspace = true }
+mdns-sd = { workspace = true }
+async-trait = { workspace = true }
+bytes = { workspace = true }
+futures-util = { workspace = true }
+tokio-tungstenite = { workspace = true }
+tracing = { workspace = true }
+
+base64 = { workspace = true }
+rand = { workspace = true }
+sha2 = { workspace = true }
+sigstore = { workspace = true }
+x509-cert = { workspace = true }
+webpki = { workspace = true }
+pki-types = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+tempfile = { workspace = true }
+wiremock = { workspace = true }
+axum = { workspace = true, features = ["ws"] }
+futures-util = { workspace = true }
+olpc-cjson = "0.1"
+rcgen = "0.13"

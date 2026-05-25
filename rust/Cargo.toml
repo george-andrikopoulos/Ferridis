@@ -1,0 +1,79 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/ferridis-core",
+    "crates/ferridis-protocol",
+    "crates/ferridis-adapter-sdk",
+    "crates/ferridis-adapter-fs",
+    "crates/ferridis-adapter-claude-cli",
+    "crates/ferridis-adapter-github",
+    "crates/ferridis-adapter-google-calendar",
+    "crates/ferridis-adapter-slack",
+    "crates/ferridis-adapter-notion",
+    "crates/ferridis-client",
+    "crates/ferridis-cli",
+    "crates/ferridis-mcp-server",
+    "crates/ferridis-discovery-broker",
+    "crates/ferridis-stdio-bridge",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "Apache-2.0"
+authors = ["George Andrikopoulos"]
+repository = "https://github.com/george-andrikopoulos/ferridis"
+description = "Ferridis — an opinionated, type-driven design layer above the AAIF-governed agent connectivity wire standards (MCP, A2A)."
+
+[workspace.dependencies]
+# In-tree crates
+ferridis-core = { path = "crates/ferridis-core", version = "0.1.0" }
+ferridis-protocol = { path = "crates/ferridis-protocol", version = "0.1.0" }
+ferridis-adapter-sdk = { path = "crates/ferridis-adapter-sdk", version = "0.1.0" }
+ferridis-client = { path = "crates/ferridis-client", version = "0.1.0" }
+
+# Core dependencies
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+time = { version = "0.3", features = ["serde", "macros"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+url = { version = "2", features = ["serde"] }
+secrecy = { version = "0.8", features = ["serde"] }
+keyring = { version = "3", default-features = false, features = ["apple-native", "windows-native", "sync-secret-service"] }
+jsonschema = { version = "0.30", default-features = false }
+sigstore = { version = "0.13", default-features = false, features = ["cached-client", "cosign", "rustls-tls", "cert", "verify", "sigstore-trust-root"] }
+x509-cert = { version = "0.2", features = ["pem"] }
+webpki = { package = "rustls-webpki", version = "0.103", default-features = false, features = ["ring", "std"] }
+pki-types = { package = "rustls-pki-types", version = "1" }
+
+# HTTP / async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "fs", "signal", "io-std", "io-util", "process"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+axum = "0.7"
+tower = { version = "0.5", features = ["util"] }
+async-trait = "0.1"
+bytes = "1"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+tokio-tungstenite = { version = "0.29", default-features = false, features = ["connect", "handshake", "rustls-tls-webpki-roots"] }
+
+# OAuth / crypto helpers (PKCE)
+base64 = "0.22"
+rand = "0.8"
+sha2 = "0.10"
+
+# Structured logging
+tracing = "0.1"
+
+mdns-sd = "0.13"
+
+# Dev-only
+wiremock = "0.6"
+tempfile = "3"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

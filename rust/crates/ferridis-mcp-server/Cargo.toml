@@ -1,0 +1,47 @@
+[package]
+name = "ferridis-mcp-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "MCP server that publishes Ferridis-connected capabilities as MCP tools. The Ferridis-→-MCP half of the interoperability shim."
+
+[[bin]]
+name = "ferridis-mcp-server"
+path = "src/main.rs"
+
+[dependencies]
+ferridis-core = { workspace = true }
+ferridis-protocol = { workspace = true }
+ferridis-client = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+url = { workspace = true }
+secrecy = { workspace = true }
+
+tokio = { workspace = true }
+axum = { workspace = true }
+futures-util = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+base64 = { workspace = true }
+rand = { workspace = true }
+sha2 = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+tempfile = { workspace = true }
+ferridis-adapter-sdk = { workspace = true }
+ferridis-adapter-fs = { path = "../ferridis-adapter-fs", version = "0.1.0" }
+axum = { workspace = true }
+reqwest = { workspace = true }
+async-trait = { workspace = true }
+async-stream = "0.3"
+sha2 = { workspace = true }
+base64 = { workspace = true }
+rand = { workspace = true }
+url = { workspace = true }

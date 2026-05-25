@@ -1,0 +1,26 @@
+[package]
+name = "ferridis-stdio-bridge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Bridges stdio MCP servers to HTTP SSE, with optional discovery-broker self-registration."
+
+[[bin]]
+name = "ferridis-stdio-bridge"
+path = "src/main.rs"
+
+[dependencies]
+ferridis-adapter-sdk = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true }
+futures-util = { workspace = true }
+bytes = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

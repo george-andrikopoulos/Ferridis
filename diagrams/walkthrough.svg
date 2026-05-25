@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 980 660" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="wt-title wt-desc">
+  <title id="wt-title">Ferridis — End-to-end walkthrough</title>
+  <desc id="wt-desc">Sequence diagram showing how Ferridis handles "Tell Alice I'll be 10 minutes late" — from intent extraction through mesh resolution, schema load, connection use, and confirmation.</desc>
+
+  <!-- Arrow markers — declared first so they're available below -->
+  <defs>
+    <marker id="wt-arr-blue"   viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#1D4ED8"/>
+    </marker>
+    <marker id="wt-arr-purple" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#7C3AED"/>
+    </marker>
+    <marker id="wt-arr-teal"   viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#0F766E"/>
+    </marker>
+    <marker id="wt-arr-orange" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#D97706"/>
+    </marker>
+    <marker id="wt-arr-grey"   viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#9CA3AF"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="980" height="660" fill="#F8FAFC"/>
+
+  <!-- Header -->
+  <text x="490" y="30" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,-apple-system,Helvetica,sans-serif"
+        font-size="15" font-weight="700" letter-spacing="-0.3" fill="#0F172A">End-to-end walkthrough — "Tell Alice I'll be 10 minutes late"</text>
+  <text x="490" y="48" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#94A3B8">
+    Intent extraction · mesh resolution · schema load · connection use · structured confirmation
+  </text>
+
+  <!-- ─────────────────────────────────────────────
+       PARTICIPANTS  (lifeline x positions)
+       U=95   M=245   R=435   W=630   S=850
+       ───────────────────────────────────────────── -->
+
+  <!-- User -->
+  <rect x="30"  y="62" width="130" height="44" rx="6" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+  <text x="95" y="80" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#0F172A">User</text>
+  <text x="95" y="96" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#64748B">person</text>
+
+  <!-- Model -->
+  <rect x="175" y="62" width="140" height="44" rx="6" fill="#F5F3FF" stroke="#DDD6FE" stroke-width="1.2"/>
+  <text x="245" y="80" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#7C3AED">Model</text>
+  <text x="245" y="96" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#7C3AED">AI assistant</text>
+
+  <!-- ferridis-client -->
+  <rect x="340" y="62" width="190" height="44" rx="6" fill="#FFF7ED" stroke="#FED7AA" stroke-width="1.2"/>
+  <text x="435" y="78" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#9A3412">ferridis-client</text>
+  <text x="435" y="96" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#EA580C">resolver · registry · dispatch</text>
+
+  <!-- Wallet -->
+  <rect x="558" y="62" width="144" height="44" rx="6" fill="#F0FFF4" stroke="#86EFAC" stroke-width="1.2"/>
+  <text x="630" y="80" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#166534">Wallet</text>
+  <text x="630" y="96" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#16A34A">OS-keychain store</text>
+
+  <!-- Slack adapter -->
+  <rect x="776" y="62" width="160" height="44" rx="6" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1.2"/>
+  <text x="856" y="80" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="700" fill="#1D4ED8">Slack adapter</text>
+  <text x="856" y="96" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#3B82F6">ferridis-adapter-slack</text>
+
+  <!-- Lifelines -->
+  <line x1="95"  y1="106" x2="95"  y2="628" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="245" y1="106" x2="245" y2="628" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="435" y1="106" x2="435" y2="628" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="630" y1="106" x2="630" y2="628" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="856" y1="106" x2="856" y2="628" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- ─────────────────────────────────────────────
+       MESSAGES  (step rows)
+       Row 1: y=134    (U → M: user message)
+       Row 2: y=174    (M → R: intent emit)
+       Row 3: y=214    (R loop: mesh query)
+       Row 4: y=254    (R → M: candidates)
+       Row 5: y=294    (M → R: select Slack)
+       Row 6: y=334    (R loop: fetch schema)
+       Row 7: y=374    (R → W: load token)
+       Row 8: y=414    (W → R: Bearer token)
+       Row 9: y=454    (R → S: POST intent)
+       Row 10: y=494   (S → R: 200 confirm)
+       Row 11: y=534   (R → M: structured confirm)
+       Row 12: y=574   (M → U: human message)
+       ───────────────────────────────────────────── -->
+
+  <!-- 1. User → Model -->
+  <line x1="99" y1="134" x2="241" y2="134" stroke="#0F172A" stroke-width="1.5" marker-end="url(#wt-arr-blue)"/>
+  <rect x="100" y="120" width="140" height="18" rx="3" fill="#F8FAFC"/>
+  <text x="170" y="132" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#0F172A" font-style="italic">"Tell Alice I'll be 10 min late"</text>
+
+  <!-- 2. Model → ferridis-client: send-message intent -->
+  <line x1="249" y1="174" x2="431" y2="174" stroke="#7C3AED" stroke-width="1.5" marker-end="url(#wt-arr-purple)"/>
+  <rect x="249" y="159" width="184" height="18" rx="3" fill="#F8FAFC"/>
+  <text x="341" y="171" text-anchor="middle"
+        font-family="ui-monospace,monospace" font-size="10" fill="#7C3AED">send-message(recipient="Alice"…)</text>
+
+  <!-- 3. ferridis-client self-loop: query personal → org → public -->
+  <path d="M 439,214 C 510,214 510,236 439,236" fill="none" stroke="#D97706" stroke-width="1.3" marker-end="url(#wt-arr-orange)"/>
+  <rect x="447" y="208" width="196" height="18" rx="3" fill="#FFFBEB"/>
+  <text x="545" y="220" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#D97706">query personal → org → public mesh</text>
+
+  <!-- 4. ferridis-client → Model: candidates with confidence scores -->
+  <line x1="431" y1="272" x2="249" y2="272" stroke="#9CA3AF" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#wt-arr-grey)"/>
+  <rect x="256" y="257" width="176" height="18" rx="3" fill="#F8FAFC"/>
+  <text x="344" y="269" text-anchor="middle"
+        font-family="ui-monospace,monospace" font-size="10" fill="#6B7280">Slack 0.92, Gmail 0.71, iMsg 0.63</text>
+
+  <!-- 5. Model → ferridis-client: select Slack -->
+  <line x1="249" y1="312" x2="431" y2="312" stroke="#7C3AED" stroke-width="1.5" marker-end="url(#wt-arr-purple)"/>
+  <rect x="264" y="297" width="152" height="18" rx="3" fill="#F8FAFC"/>
+  <text x="340" y="309" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#7C3AED">select Slack (recent context)</text>
+
+  <!-- 6. ferridis-client self-loop: fetch Slack OpenAPI schema on demand -->
+  <path d="M 439,352 C 510,352 510,374 439,374" fill="none" stroke="#D97706" stroke-width="1.3" marker-end="url(#wt-arr-orange)"/>
+  <rect x="447" y="346" width="190" height="18" rx="3" fill="#FFFBEB"/>
+  <text x="542" y="358" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#D97706">fetch Slack OpenAPI schema on demand</text>
+
+  <!-- 7. ferridis-client → Wallet: load Slack connection token -->
+  <line x1="439" y1="392" x2="626" y2="392" stroke="#D97706" stroke-width="1.5" marker-end="url(#wt-arr-orange)"/>
+  <rect x="446" y="377" width="176" height="18" rx="3" fill="#F8FAFC"/>
+  <text x="534" y="389" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#D97706">load Slack connection token</text>
+
+  <!-- 8. Wallet → ferridis-client: Bearer token -->
+  <line x1="626" y1="414" x2="439" y2="414" stroke="#9CA3AF" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#wt-arr-grey)"/>
+  <rect x="440" y="400" width="180" height="18" rx="3" fill="#F8FAFC"/>
+  <text x="530" y="412" text-anchor="middle"
+        font-family="ui-monospace,monospace" font-size="10" fill="#6B7280">Bearer &lt;token&gt;</text>
+
+  <!-- 9. ferridis-client → Slack: POST /intents/send-message -->
+  <line x1="439" y1="454" x2="852" y2="454" stroke="#1D4ED8" stroke-width="1.8" marker-end="url(#wt-arr-blue)"/>
+  <rect x="540" y="439" width="220" height="18" rx="3" fill="#F8FAFC"/>
+  <text x="650" y="451" text-anchor="middle"
+        font-family="ui-monospace,monospace" font-size="10" fill="#1D4ED8">POST /intents/send-message + Bearer</text>
+
+  <!-- 9 sub-label: X-Ferridis headers note -->
+  <rect x="540" y="458" width="218" height="14" rx="3" fill="#EFF6FF"/>
+  <text x="649" y="468" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" fill="#3B82F6">X-Ferridis-Connection · X-Ferridis-Intent</text>
+
+  <!-- 10. Slack → ferridis-client: 200 {message_id} -->
+  <line x1="852" y1="498" x2="439" y2="498" stroke="#9CA3AF" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#wt-arr-grey)"/>
+  <rect x="490" y="484" width="194" height="18" rx="3" fill="#F8FAFC"/>
+  <text x="587" y="496" text-anchor="middle"
+        font-family="ui-monospace,monospace" font-size="10" fill="#6B7280">200 {message_id: "C123…"}</text>
+
+  <!-- 11. ferridis-client → Model: structured confirmation -->
+  <line x1="431" y1="534" x2="249" y2="534" stroke="#9CA3AF" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#wt-arr-grey)"/>
+  <rect x="256" y="520" width="172" height="18" rx="3" fill="#F8FAFC"/>
+  <text x="342" y="532" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#6B7280">structured confirmation</text>
+
+  <!-- 12. Model → User: human-readable status -->
+  <line x1="241" y1="574" x2="99" y2="574" stroke="#9CA3AF" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#wt-arr-grey)"/>
+  <rect x="99" y="560" width="140" height="18" rx="3" fill="#F8FAFC"/>
+  <text x="169" y="572" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#0F172A" font-style="italic">"Sent to Alice on Slack"</text>
+
+  <!-- Context cost note -->
+  <rect x="30" y="600" width="430" height="22" rx="5" fill="#F0F9FF" stroke="#BAE6FD" stroke-width="0.8"/>
+  <text x="245" y="614" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#0369A1">
+    Context cost ≈ 3 manifests (~600 tokens) + Slack schema (~1 200 tokens) · other 498 capabilities stay out of context
+  </text>
+
+  <!-- Footer -->
+  <text x="490" y="645" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#CBD5E1">
+    ferridis-client · ferridis-protocol · ferridis-adapter-slack · George Andrikopoulos — Ferridis
+  </text>
+</svg>

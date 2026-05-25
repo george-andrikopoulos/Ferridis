@@ -1,0 +1,8 @@
+[toolchain]
+channel = "1.95.0"
+profile = "default"
+components = ["rustfmt", "clippy"]
+# Zed (Preview 1.2+) builds extensions with `wasm32-wasip2` (WASI Preview 2,
+# Component Model). Older Zed versions used `wasm32-wasip1`; the toolchain
+# carries both targets so local builds can match whichever Zed expects.
+targets = ["wasm32-wasip2", "wasm32-wasip1"]

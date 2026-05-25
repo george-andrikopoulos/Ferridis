@@ -1,0 +1,10 @@
+id = "ferridis"
+name = "Ferridis"
+description = "Bring Ferridis-connected capabilities to Zed's assistant. Publishes the Ferridis MCP server (ferridis-mcp-server) as a Zed context server."
+version = "0.1.0"
+schema_version = 1
+authors = ["George Andrikopoulos"]
+repository = "https://github.com/george-andrikopoulos/ferridis"
+
+[context_servers.ferridis-mcp]
+description = "Ferridis filesystem and other registered capabilities, surfaced as MCP tools."

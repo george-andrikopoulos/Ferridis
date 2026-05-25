@@ -1,0 +1,24 @@
+[package]
+name = "ferridis-zed-extension"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "Apache-2.0"
+authors = ["George Andrikopoulos"]
+description = "Zed extension: registers ferridis-mcp-server as a Zed context server."
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+zed_extension_api = "0.6"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = "debuginfo"
+panic = "abort"
+codegen-units = 1

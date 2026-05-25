@@ -1,0 +1,73 @@
+{
+  "name": "ferridis",
+  "displayName": "Ferridis",
+  "description": "Bring Ferridis-connected capabilities — including wrapped MCP servers — to VS Code via native MCP support.",
+  "version": "0.2.0",
+  "publisher": "ferridis",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/george-andrikopoulos/ferridis"
+  },
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "Ferridis",
+      "properties": {
+        "ferridis.serverPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Absolute path to the `ferridis-mcp-server` binary. Build it with:\n```\ncd rust && cargo build --release -p ferridis-mcp-server\n```\nThen set this to `rust/target/release/ferridis-mcp-server`.",
+          "scope": "machine"
+        },
+        "ferridis.adaptersConfig": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to the adapters JSON config file. Defaults to `~/.ferridis/adapters.json` when empty. Each entry is a native Ferridis adapter, an MCP SSE server, or an MCP stdio server — all are discovered and re-exposed as MCP tools.",
+          "scope": "machine"
+        },
+        "ferridis.keychainNamespace": {
+          "type": "string",
+          "default": "ferridis",
+          "description": "OS keychain service name used for credential storage.",
+          "scope": "machine"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "ferridis.configure",
+        "title": "Ferridis: Configure",
+        "category": "Ferridis"
+      },
+      {
+        "command": "ferridis.showLogs",
+        "title": "Ferridis: Show Logs",
+        "category": "Ferridis"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node20",
+    "watch": "npm run build -- --watch",
+    "vscode:prepublish": "npm run build",
+    "package": "vsce package --out ferridis.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.99.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.4.0"
+  }
+}

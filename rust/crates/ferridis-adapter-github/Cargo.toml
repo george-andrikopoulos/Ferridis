@@ -1,0 +1,30 @@
+[package]
+name = "ferridis-adapter-github"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "GitHub reference adapter for Ferridis — the canonical developer-tool example. Exposes repos, files, issues, pull requests, and code search as Ferridis intents."
+
+[dependencies]
+ferridis-core = { workspace = true }
+ferridis-adapter-sdk = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+secrecy = { workspace = true }
+base64 = "0.22"
+tokio = { workspace = true }
+reqwest = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+reqwest = { workspace = true }
+axum = { workspace = true }
+tracing-subscriber = { workspace = true }
+wiremock = { workspace = true }
+serde_json = { workspace = true }
