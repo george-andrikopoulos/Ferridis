@@ -177,6 +177,22 @@ Drives the `claude` CLI (Claude Code) as a stream-kind Ferridis capability — t
 - [x] Reference adapters: **Notion done** (`ferridis-adapter-notion`) — 6 intents (list-databases, query-database, get-page, create-page, update-page, search), integration token held server-side, mandatory `Notion-Version: 2022-06-28` header, `query-database` and `update-page` strip routing fields before forwarding to API. 4 unit + 9 e2e tests via wiremock. Default port 7830.
 - [~] **Streaming response schema language — design extension + manifest plumbing shipped** (2026-05-11/12) — design lives in [`wire-protocol.md`](./wire-protocol.md). Capabilities declare per-intent `kind: "request" | "stream"` and (for streamed kinds) a `chunk_schema_url`. Wire transport reuses the SSE primitive from M6. Client API: `dispatch_streaming(capability, intent, body) -> impl Stream<Item = Result<Value, ClientError>>`. **v0.3 manifest plumbing shipped** (2026-05-12): `ferridis_core::IntentKind` (Request/Stream), `ferridis_core::IntentMetadata` (kind + optional chunk_schema_url), `Manifest::intent_kind(verb)` + `Manifest::intent_metadata(verb)`. Manifest's `intents` field accepts both flat strings (default kind: Request) and structured `{verb, kind, chunk_schema_url}` objects via serde-untagged. Validation enforces that streamed intents must declare a chunk_schema_url — silent default would be a footgun for clients trying to validate received chunks. **Shipped (v0.3, 2026-05-12)**: `Client::dispatch_streaming` fully implemented — see v0.3 notes above.
 
+## Enforcement gaps (from the FEATURES.md ledger audit, 2026-07-20)
+
+Every **NOTHING YET — exposed** entry in [FEATURES.md](./FEATURES.md) is a documented behavior with no type or test holding it. Close each gap and update the corresponding ledger row in the same change:
+
+- [ ] `ferridis-stdio-bridge` test suite — the crate ships **zero tests** (hermetic e2e against a stub stdio MCP server, mirroring the claude-cli adapter's pattern)
+- [ ] `EventPublisher` / webhook delivery test against a receiving server (`ferridis-adapter-sdk`)
+- [ ] Token-redaction regression test in `ferridis-core` (assert `Debug`/`Display` never leak the secret)
+- [ ] Client-side `EventChannelNotDeclared` rejection test (undeclared channel on a manifest that declares channels)
+- [ ] SSE reconnect resume-behavior e2e (drop mid-stream → reconnect with `Last-Event-ID` cursor → resume)
+- [ ] Broker self-registration heartbeat e2e (`BrokerRegistration` re-registers within the TTL window; abort-on-drop stops it)
+- [ ] Tier-used logging capture test (assert the `tracing::info!` emission on dispatch)
+- [ ] HTTP pool-hardening regression test (or accept as config-constant-only and note it)
+- [ ] Editor-extension automated tests (VS Code TS extension, Zed WASM extension) — currently manual verification only
+- [ ] Property-based tests (`proptest`) for parser boundaries — `IntentVerb`, `CapabilityRef`, `Manifest`, SSE parser (workspace currently has none; round-trip + rejection laws belong at the property layer)
+- [ ] Wire `BackpressureSignal` / `StreamChunk` into the live streaming path + clean cancellation message for streamed intents (types shipped v0.4, unwired)
+
 ## Open design questions
 
 These do not block tasks 7–12 but should be resolved before v1.0:

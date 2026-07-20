@@ -223,3 +223,58 @@ Answers to questions that were open in earlier revisions:
 - **Adapter self-registration.** `ferridis-adapter-sdk::broker` ships a `BrokerRegistration` RAII handle with 240 s heartbeat — adapters call it at startup, no manual POST required. (v0.6)
 - **stdio MCP bridging.** `ferridis-stdio-bridge` wraps any stdio MCP server as an HTTP SSE endpoint the broker can register. Deployed to handle tools like `linux-health-mcp` that have no network URL. (v0.6)
 - **Cert revocation.** CRL-based revocation check against the CDP extension in the signing cert. `RevocationMode::BestEffort | Required | Skip` is caller-configurable. CT log verification deferred (see open questions). (v0.6)
+
+---
+
+## Workspace code architecture
+
+Everything above describes the *protocol*. This section describes the *Rust workspace* that implements it — crate topology, parsing boundaries, and the decisions log. (It lives in this file rather than a separate `ARCHITECTURE.md` because the repository must build on case-insensitive filesystems, where the two names collide.)
+
+### Crate topology
+
+Fourteen crates in `rust/crates/`, layered strictly — a crate depends only on crates in the rows above it:
+
+| Layer | Crates | Role |
+|---|---|---|
+| Types | `ferridis-core` | Pure types, no I/O. Typestate `Connection<S>`, parse-don't-validate `Manifest`, validated `IntentVerb` / `Tier` / `Tiers` / `AccessToken`, `IntentKind`, `EventChannel`, `ChannelTransport`. |
+| Wire | `ferridis-protocol` | HTTP transport, OAuth 2.0+PKCE, manifest/schema fetch, mesh + federated mesh + signed mesh-index, Sigstore trust chain (TUF auto-fetch, CRL revocation), SSE events + streaming, WebSocket bidi, mDNS scanning. |
+| Frameworks | `ferridis-adapter-sdk` (publisher), `ferridis-client` (consumer) | SDK: `Capability` trait, axum `AdapterServer`, kind-aware routing, request validation, `WsHandler`, event publishing, broker self-registration. Client: keychain wallet, three-tier registry, intent matching, auth-aware + streaming dispatch, schema validation, MCP-consumer module, mesh/broker/mDNS registration. |
+| Adapters | `ferridis-adapter-fs`, `-claude-cli`, `-google-calendar`, `-slack`, `-github`, `-notion` | Reference publishers. Each embeds its manifest and implements `Capability` (and `dispatch_stream` where stream-kind). |
+| Binaries | `ferridis-cli`, `ferridis-mcp-server`, `ferridis-discovery-broker`, `ferridis-stdio-bridge` | Sidecar (JSON-RPC over stdio), MCP-publisher shim, local service registry (port 7825), stdio-MCP-to-SSE bridge (port 7826). |
+
+Default adapter ports: fs 7821, claude-cli 7823, github 7827, google-calendar 7828, slack 7829, notion 7830.
+
+### Parsing boundaries
+
+Every external input is parsed into a witness type at exactly one perimeter; interior code takes witnesses and never re-checks:
+
+- **JSON off the wire** → `serde(try_from = "String")` on every validated newtype (`IntentVerb`, `Category`, `Summary`, `CapabilityVersion`, `CapabilityRef`). Deserialization *is* the validating constructor.
+- **Manifests** → parsed on receipt in `ferridis-protocol::manifest`; everything downstream assumes validity.
+- **Connection lifecycle** → typestate `Connection<Pending | Authorized | Expired | Revoked>`; transitions consume `self`. Reconstruction from storage goes through `pub(crate)` ctors inside `ferridis-core` only.
+- **Filesystem paths** (fs adapter) → `Root` / `RelPath` typestate; a path that escapes the root is unrepresentable.
+- **Claude CLI inputs** → `Prompt`, `AllowedCwd`, allow-list-gated `Model`, UUID-validated `SessionId` at the dispatch boundary.
+- **Secrets** → `AccessToken` with redacted `Debug`; wallet entries live in the OS keychain, never plaintext.
+- **Request bodies** → validated twice by design: client-side against `input_schemas[intent]`, adapter-side via `Capability::body_schema` (the adapter is the final validator).
+
+Workspace-wide discipline: no `unsafe`, `#![deny(missing_docs)]` on every public crate, clippy clean with `-D warnings`, toolchain pinned 1.95.0 / Edition 2024. [FEATURES.md](./FEATURES.md) records the enforcing artifact (type or test) for every shipped feature.
+
+### Decisions log (append-only)
+
+New entries go at the bottom with date, decision, why, and what was rejected. Never rewrite old entries.
+
+| Date | Decision | Why | Rejected alternatives |
+|---|---|---|---|
+| v0.1 | Rust, Edition 2024, MSRV 1.95, toolchain pinned | Protocol-grade compile-time guarantees; reproducible builds | TypeScript/Python-style references (weaker guarantees) |
+| v0.1 | `rustls` everywhere, no OpenSSL | Portable builds, no system-dependency footgun | OpenSSL linkage |
+| v0.1 | HTTP pool hardening (`pool_idle_timeout` 15 s, `pool_max_idle_per_host` 2, `connect_timeout` 5 s) | Stale localhost keepalives survived adapter restarts and wedged calls (hit in the Task 11 demo) | Default reqwest pool settings |
+| 2026-05-11 | OS keychain wallet; **refuse to run** without a backend; refuse legacy plaintext wallets | A silent plaintext fallback is a downgrade vector; explicit `FERRIDIS_WALLET_MEMORY=1` is the only escape hatch | Plaintext fallback with a warning |
+| 2026-05-11 | `serde(try_from = "String")` on validated newtypes | `serde(transparent)` silently bypassed the validating constructors | Keeping transparent + re-validating later (scattered checks) |
+| 2026-05-11 | Publisher registers adapters partial-failure-tolerant, 10 s per-adapter timeout; `tools/list` advertises the working subset only | All-or-nothing stalled startup on one dead host; a tool guaranteed to fail is worse UX than one that isn't there | Error-placeholder tools; unbounded TCP connect window |
+| 2026-05-11 | MCP `inputSchema` preserved verbatim through the projection | Typed args (integer `limit`) must round-trip; regenerated schemas are lossy | Hardcoded per-tool schema tables as the primary source |
+| 2026-05-12 | **Sigstore** (cosign + Fulcio + Rekor) for manifest signing | Web-native, keyless, existing transparency log — reuse, don't invent key distribution | Bare Ed25519 publisher keys; self-managed X.509 |
+| 2026-05-12 | Streamed intents must declare `chunk_schema_url` (validation error otherwise) | A silent default is a footgun for chunk-validating clients | Optional field with an implicit any-schema |
+| 2026-05-12 | MCP SSE session-loss auto-recovery: typed `McpSessionExpired`, `reconnect()` + replayed `initialize`, retry exactly once | Server restarts left long-running consumers POSTing to dead sessions with no recovery path | Failing the call and requiring a host restart |
+| 2026-05-13 | Publisher branches on `intent_kind()`: stream-kind collects chunks via `dispatch_streaming`, returns final result + chunk array | MCP 2024-11-05 hosts expect a single response; progressive forwarding waits for notifications-as-chunks | Rejecting stream-kind tools from the publisher |
+| 2026-05-23 | `Lifetime` enum (`Ephemeral { expires_at }` \| `Pinned`) in the discovery broker, replacing a `persistent: bool` | The bool + TTL pair could disagree — illegal states unrepresentable instead; state file stores only pinned entries | Boolean flag beside an expiry field |
+| 2026-05-24 | `RevocationMode { BestEffort \| Required \| Skip }` for Sigstore verification, default `BestEffort` | CRL endpoints are flaky; callers choose strictness explicitly | Hard-required CRL (breaks offline use); silent skip |
+| 2026-07-20 | This section + decisions log added; FEATURES.md converted to an enforced-by ledger | Context files fail two ways — staleness and unenforced guarantees; the ledger and log exist to kill both | Feature matrix without enforcing artifacts (status quo) |

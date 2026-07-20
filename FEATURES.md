@@ -1,108 +1,111 @@
 # Ferridis features
 
-A glance at what the protocol does, what's built, and what's coming. Status is current as of the most recent commit. For commit-by-commit history of the protocol layer, see [TODO.md](./TODO.md).
+The behavior contract: what the protocol does, what's built, and what's coming — and for every shipped feature, the **enforcing artifact** that keeps it true. Status is current as of the most recent commit. For commit-by-commit history of the protocol layer, see [TODO.md](./TODO.md).
 
 ## Status legend
 
-- ✅ **Built** — implemented and (where applicable) tested.
+- ✅ **Built** — implemented, with the enforcing artifact named in the last column.
 - 🚧 **In progress** — being worked on now.
 - 📋 **Planned** — designed, queued, not started.
 - 💡 **Future** — known to matter, not yet designed.
+
+**The ledger rule:** every ✅ entry names the type or test that enforces it — a type beats a test, because the compiler checks the whole space. An entry whose guarantee has no artifact says **NOTHING YET — exposed** in bold, and closing that gap is tracked in [TODO.md](./TODO.md). An unenforced guarantee is a documented wish; this file must never let a wish look like a guarantee. Test paths are relative to the owning crate.
 
 ---
 
 ## Layer 1 — Connections
 
-| Status | Feature | Where |
-|---|---|---|
-| ✅ | Connection lifecycle as typestate (`Pending → Authorized → Expired → Revoked`) | `rust/crates/ferridis-core/src/connection.rs` |
-| ✅ | Token wrappers with redacted Debug output | `rust/crates/ferridis-core/src/token.rs` |
-| ✅ | Capability reference URL parser (`ferridis://`) | `rust/crates/ferridis-core/src/capability.rs` |
-| ✅ | Storage-friendly tagged enum for wallet round-trip | `rust/crates/ferridis-core/src/storage.rs` |
-| ✅ | OAuth 2.0+PKCE primitives (verifier/challenge/S256, authorization URL builder, token exchange) | `rust/crates/ferridis-protocol/src/oauth.rs` |
-| ✅ | Connection broker (`start_connect` → `Pending`, `complete` → `Authorized`) | `rust/crates/ferridis-protocol/src/broker.rs` |
-| ✅ | Bearer-token authenticated call helper (`X-Ferridis-Connection`, `X-Ferridis-Intent` headers) | `rust/crates/ferridis-protocol/src/call.rs` |
-| ✅ | Anonymous call helper (for `auth: none` capabilities) | `rust/crates/ferridis-protocol/src/call.rs` |
-| ✅ | **OS keychain wallet via `keyring`** — Linux Secret Service / macOS Keychain / Windows Credential Manager. Refuses to run if backend unreachable; no plaintext fallback. Per-connection entries plus reserved `__ferridis_wallet_index__` for enumeration. | `rust/crates/ferridis-client/src/wallet.rs`, `wallet_store.rs` |
-| ✅ | In-memory wallet (`Wallet::ephemeral`) for tests and embedded use | `rust/crates/ferridis-client/src/wallet_store.rs` |
+| Status | Feature | Where | Enforced by |
+|---|---|---|---|
+| ✅ | Connection lifecycle as typestate (`Pending → Authorized → Expired → Revoked`) | `rust/crates/ferridis-core/src/connection.rs` | **Type** — transitions consume `self`, wrong-state calls don't compile; + `connection.rs` tests `pending_to_authorized`, `authorized_to_expired_to_authorized`, `revoked_is_terminal`, `id_is_preserved_across_transitions` |
+| ✅ | Token wrappers with redacted Debug output | `rust/crates/ferridis-core/src/token.rs` | **Type** (`secrecy`-backed wrapper, manual serde impls); redaction regression test **NOTHING YET — exposed** |
+| ✅ | Capability reference URL parser (`ferridis://`) | `rust/crates/ferridis-core/src/capability.rs` | `capability.rs` tests `parses_valid_capability_ref`, `rejects_missing_scheme`, `rejects_invalid_version`, `round_trips_through_display`, `capability_version_deserialize_runs_through_validator` |
+| ✅ | Storage-friendly tagged enum for wallet round-trip | `rust/crates/ferridis-core/src/storage.rs` | `storage.rs` tests — four per-state round-trips + `projections_return_none_for_wrong_state` |
+| ✅ | OAuth 2.0+PKCE primitives (verifier/challenge/S256, authorization URL builder, token exchange) | `rust/crates/ferridis-protocol/src/oauth.rs` | `oauth.rs` tests `verifier_round_trips_to_challenge`, `authorization_url_carries_pkce_parameters`, `exchanges_code_for_tokens`, `surfaces_token_endpoint_failures` |
+| ✅ | Connection broker (`start_connect` → `Pending`, `complete` → `Authorized`) | `rust/crates/ferridis-protocol/src/broker.rs` | `broker.rs` tests `end_to_end_pending_to_authorized`, `unknown_state_is_rejected` |
+| ✅ | Bearer-token authenticated call helper (`X-Ferridis-Connection`, `X-Ferridis-Intent` headers) | `rust/crates/ferridis-protocol/src/call.rs` | `call.rs` tests `issues_a_call_with_bearer_and_ferridis_headers`, `unauthorized_maps_to_connection_expired`, `too_many_requests_maps_to_rate_limited` |
+| ✅ | Anonymous call helper (for `auth: none` capabilities) | `rust/crates/ferridis-protocol/src/call.rs` | `call.rs` test `anonymous_call_omits_authorization_and_connection_headers` |
+| ✅ | **OS keychain wallet via `keyring`** — Linux Secret Service / macOS Keychain / Windows Credential Manager. Refuses to run if backend unreachable; no plaintext fallback. Per-connection entries plus reserved `__ferridis_wallet_index__` for enumeration. | `rust/crates/ferridis-client/src/wallet.rs`, `wallet_store.rs` | `wallet.rs` tests `store_round_trip_preserves_connections`, `remove_drops_entry_and_updates_index`, `detect_legacy_plaintext_errors_when_file_present`; e2e `wallet_round_trip_preserves_inserted_connection` (`tests/real_to_real.rs`) |
+| ✅ | In-memory wallet (`Wallet::ephemeral`) for tests and embedded use | `rust/crates/ferridis-client/src/wallet_store.rs` | `ephemeral_wallet_round_trips_in_memory`, `memory_store_round_trip`, `memory_store_isolates_keys` |
 
 ## Layer 2 — Capability mesh
 
-| Status | Feature | Where |
-|---|---|---|
-| ✅ | Manifest parser (parse-don't-validate, all rules enforced) | `rust/crates/ferridis-core/src/manifest.rs` |
-| ✅ | Intent verb validator (canonical form enforced) | `rust/crates/ferridis-core/src/intent.rs` |
-| ✅ | Tier set (non-empty by construction, precedence-aware) | `rust/crates/ferridis-core/src/tier.rs` |
-| ✅ | Manifest fetching over HTTP (validated via core's parser on receipt) | `rust/crates/ferridis-protocol/src/manifest.rs` |
-| ✅ | In-memory manifest registry with TTL freshness check | `rust/crates/ferridis-client/src/registry.rs` |
-| ✅ | **Three-tier registry traversal** (`Personal → Org → Public`) with tier-aware candidate ordering and per-tier grouping | `rust/crates/ferridis-client/src/registry.rs` |
-| ✅ | **Public mesh registry** with per-capability TTL cache and `endpoint_url` field on manifests | `rust/crates/ferridis-protocol/src/mesh.rs` |
-| ✅ | **Federated mesh** — priority-ordered chain of mesh clients, fall-through on 404 | `rust/crates/ferridis-protocol/src/mesh.rs` (`FederatedMesh`) |
-| ✅ | **Signed mesh-index** — `{mesh_root}/index.json` + cosign bundle, verified through the full Sigstore trust chain, expiry-enforced | `rust/crates/ferridis-protocol/src/mesh.rs` (`MeshIndex`) |
-| ✅ | **`Client::register_from_federated_mesh` + `register_all_from_mesh`** — auto-populate Public tier from signed index | `rust/crates/ferridis-client/src/client.rs` |
-| ✅ | **Manifest signing — full Sigstore trust chain + CRL revocation.** Signature-vs-cert + cert validity window + Rekor inclusion proof + Fulcio cert chain via `rustls-webpki` + CRL check against signing cert's CDP extension. `TrustRoot::from_sigstore_tuf(cache_dir)` auto-fetches Fulcio CAs + Rekor keys from Sigstore's Public Good TUF repo. `RevocationMode::BestEffort \| Required \| Skip` configurable via `TrustRoot::with_revocation_mode`. `verify_signed_manifest_with_revocation` is the new top-level verification entry point. | `rust/crates/ferridis-protocol/src/signing.rs` |
-| ✅ | **mDNS service scanning** — `MdnsScanner` browses `_mcp._tcp.local` + `_ferridis._tcp.local` via `mdns-sd 0.13`; `Client::discover_mdns()` auto-registers resolved services and returns a drop-to-stop `DiscoveryHandle` | `rust/crates/ferridis-protocol/src/mdns.rs` |
-| ✅ | **Discovery broker** (`ferridis-discovery-broker`, port 7825) — `POST /discovery/register` (ephemeral TTL-300s or persistent), `GET /discovery/services` (with `"persistent": bool`), `GET /discovery/events` (SSE push), `DELETE /discovery/services/:name` (204/404). `Lifetime` enum (`Ephemeral { expires_at }` \| `Pinned`, TDP Pattern 5). Pinned entries survive TTL and restart; state file `~/.local/share/ferridis/discovery.json` stores only pinned entries. `Client::discover_broker(url)` syncs snapshot + subscribes to SSE stream. Systemd user unit ships. | `rust/crates/ferridis-discovery-broker/` |
-| ✅ | **Adapter self-registration (v0.6)** — `ferridis-adapter-sdk::broker`: `BrokerRegistration` RAII handle (heartbeat 240 s, abort-on-drop), `RegistrationPersistence` enum (Ephemeral/Pinned), `ServiceKind` enum (Mcp/Ferridis). `ferridis-adapter-fs` and `ferridis-adapter-claude-cli` serve examples wired with `--discovery-broker`, `--service-name`, `--pinned`. | `rust/crates/ferridis-adapter-sdk/src/broker.rs` |
-| ✅ | **`ferridis-stdio-bridge` (v0.6)** — binary crate bridging any stdio MCP server to HTTP SSE (session-per-connection, `start_kill` on drop). `--command`, `--arg`, `--bind 127.0.0.1:7826`, `--discovery-broker`, `--service-name`, `--pinned`. TDP: `Command`, `SessionId`, `SpawnConfig::spawn() -> SpawnedChild`. | `rust/crates/ferridis-stdio-bridge/` |
+| Status | Feature | Where | Enforced by |
+|---|---|---|---|
+| ✅ | Manifest parser (parse-don't-validate, all rules enforced) | `rust/crates/ferridis-core/src/manifest.rs` | **Type** — constructable only through the validating parser; + `manifest.rs` suite (`parses_valid_manifest`, `rejects_missing_fields`, `rejects_empty_intents`, `rejects_duplicate_intents`, `rejects_invalid_intent_verb`, `rejects_oversized_summary`, …) |
+| ✅ | Intent verb validator (canonical form enforced) | `rust/crates/ferridis-core/src/intent.rs` | `intent.rs` suite (`rejects_uppercase`, `rejects_underscores`, `rejects_leading_dash`, `rejects_double_dash`, `deserialize_runs_through_validator`, …) |
+| ✅ | Tier set (non-empty by construction, precedence-aware) | `rust/crates/ferridis-core/src/tier.rs` | **Type** (non-empty by construction); + `tier.rs` tests `tiers_rejects_empty`, `preferred_picks_highest_precedence` |
+| ✅ | Manifest fetching over HTTP (validated via core's parser on receipt) | `rust/crates/ferridis-protocol/src/manifest.rs` | `manifest.rs` tests `fetches_and_validates_a_manifest`, `rejects_invalid_manifest_body`, `surfaces_bad_status` |
+| ✅ | In-memory manifest registry with TTL freshness check | `rust/crates/ferridis-client/src/registry.rs` | `registry.rs` tests `fresh_record_is_within_ttl`, `insert_replaces_existing_record` |
+| ✅ | **Three-tier registry traversal** (`Personal → Org → Public`) with tier-aware candidate ordering and per-tier grouping | `rust/crates/ferridis-client/src/registry.rs` | `registry.rs` tests `candidates_sorted_by_tier_priority`, `candidates_by_tier_groups_matches`, `records_default_to_personal_tier`, `set_tier_retags_existing_record` |
+| ✅ | **Public mesh registry** with per-capability TTL cache and `endpoint_url` field on manifests | `rust/crates/ferridis-protocol/src/mesh.rs` | `mesh.rs` URL-convention tests; e2e `register_from_mesh_verifies_signed_manifest_and_tags_public` (`ferridis-client/tests/real_to_real.rs`) |
+| ✅ | **Federated mesh** — priority-ordered chain of mesh clients, fall-through on 404 | `rust/crates/ferridis-protocol/src/mesh.rs` (`FederatedMesh`) | e2e `federated_mesh_falls_through_on_404_and_returns_from_next_tier`, `federated_mesh_capability_not_found_when_no_tier_has_it` |
+| ✅ | **Signed mesh-index** — `{mesh_root}/index.json` + cosign bundle, verified through the full Sigstore trust chain, expiry-enforced | `rust/crates/ferridis-protocol/src/mesh.rs` (`MeshIndex`) | `mesh.rs` tests `mesh_index_is_expired_compares_against_now`, `mesh_index_capabilities_for_intent_returns_matching_entries`, `mesh_index_round_trips_through_json`, `index_url_lives_at_mesh_root` |
+| ✅ | **`Client::register_from_federated_mesh` + `register_all_from_mesh`** — auto-populate Public tier from signed index | `rust/crates/ferridis-client/src/client.rs` | e2e `register_from_federated_mesh_falls_through_to_next_tier_and_tags_public` |
+| ✅ | **Manifest signing — full Sigstore trust chain + CRL revocation.** Signature-vs-cert + cert validity window + Rekor inclusion proof + Fulcio cert chain via `rustls-webpki` + CRL check against signing cert's CDP extension. `TrustRoot::from_sigstore_tuf(cache_dir)` auto-fetches Fulcio CAs + Rekor keys from Sigstore's Public Good TUF repo. `RevocationMode::BestEffort \| Required \| Skip` configurable via `TrustRoot::with_revocation_mode`. `verify_signed_manifest_with_revocation` is the new top-level verification entry point. | `rust/crates/ferridis-protocol/src/signing.rs` | `signing.rs` suite (24 tests): `round_trip_verifies_a_freshly_signed_manifest`, `rejects_a_tampered_manifest`, `full_trust_root_path_validates_real_fulcio_chain`, `full_trust_root_path_rejects_chain_to_untrusted_ca`, `cert_in_crl_fails_revocation_check`, `describe_does_not_leak_keys_or_signatures`, … + `#[ignore]`'d live test against the real Public Good Instance |
+| ✅ | **mDNS service scanning** — `MdnsScanner` browses `_mcp._tcp.local` + `_ferridis._tcp.local` via `mdns-sd 0.13`; `Client::discover_mdns()` auto-registers resolved services and returns a drop-to-stop `DiscoveryHandle` | `rust/crates/ferridis-protocol/src/mdns.rs` | `tests/discovery_types.rs`: `mdns_scanner_starts_and_stops`, `discovered_service_round_trips_fields` (live network browse verified manually) |
+| ✅ | **Discovery broker** (`ferridis-discovery-broker`, port 7825) — register (ephemeral TTL-300s or persistent), list, SSE push, delete. `Lifetime` enum (`Ephemeral { expires_at }` \| `Pinned`, TDP Pattern 5). Pinned entries survive TTL and restart; state file stores only pinned entries. `Client::discover_broker(url)` syncs snapshot + subscribes to SSE stream. Systemd user unit ships. | `rust/crates/ferridis-discovery-broker/` | **Type** (`Lifetime` enum — bool/TTL disagreement unrepresentable); + `tests/broker_api.rs` (11 tests): `persistent_registration_survives_ttl`, `ephemeral_registration_expires_after_ttl`, `state_file_persists_registrations_across_restarts`, `state_file_entries_are_always_pinned`, … ; client side `tests/discover_broker.rs` |
+| ✅ | **Adapter self-registration (v0.6)** — `ferridis-adapter-sdk::broker`: `BrokerRegistration` RAII handle (heartbeat 240 s, abort-on-drop), `RegistrationPersistence` enum, `ServiceKind` enum. `ferridis-adapter-fs` and `ferridis-adapter-claude-cli` serve examples wired with `--discovery-broker`, `--service-name`, `--pinned`. | `rust/crates/ferridis-adapter-sdk/src/broker.rs` | `broker.rs` input-type tests (`broker_url_*`, `service_name_*`, `adapter_url_*`, `service_kind_wire_strings`); heartbeat-loop e2e **NOTHING YET — exposed** |
+| ✅ | **`ferridis-stdio-bridge` (v0.6)** — binary crate bridging any stdio MCP server to HTTP SSE (session-per-connection, `start_kill` on drop). `--command`, `--arg`, `--bind 127.0.0.1:7826`, `--discovery-broker`, `--service-name`, `--pinned`. TDP: `Command`, `SessionId`, `SpawnConfig::spawn() -> SpawnedChild`. | `rust/crates/ferridis-stdio-bridge/` | **NOTHING YET — exposed** (crate ships zero tests; the typed `SpawnConfig::spawn() -> SpawnedChild` boundary is the only compile-time guarantee; verified manually against a live stdio MCP server) |
 
 ## Layer 3 — Web-native specs
 
-| Status | Feature | Where |
-|---|---|---|
-| ✅ | Schema URL parsing into `url::Url` | `rust/crates/ferridis-core/src/manifest.rs` |
-| ✅ | Lazy schema fetching (raw bytes + content type, opaque to parsers) | `rust/crates/ferridis-protocol/src/schema.rs` |
-| ✅ | Adapter-side schema serving (embedded or redirect) | `rust/crates/ferridis-adapter-sdk/src/server.rs` |
-| ✅ | **Schema-driven request validation at the dispatch boundary** — `jsonschema 0.30` validates outbound bodies against `CapabilityRecord.input_schemas[intent]`; typed `InvalidArgs { capability, intent, details }`; lenient on malformed schemas (logs WARN, lets adapter remain final validator) | `rust/crates/ferridis-client/src/client.rs` |
-| ✅ | **MCP `inputSchema` verbatim through the projection** — ferridis-client preserves MCP server schemas end-to-end so integer/typed args round-trip cleanly through the publisher | `rust/crates/ferridis-client/src/mcp/`, `rust/crates/ferridis-mcp-server/` |
-| ✅ | **Adapter-SDK request validation** — `validate_body` + `ValidationOutcome` + `Capability::body_schema` hook + server gate (mirror of the client-side check, second line of defence) | `rust/crates/ferridis-adapter-sdk/src/server.rs` |
-| 💡 | AsyncAPI schema fetching for event channels | future |
+| Status | Feature | Where | Enforced by |
+|---|---|---|---|
+| ✅ | Schema URL parsing into `url::Url` | `rust/crates/ferridis-core/src/manifest.rs` | Covered by the `manifest.rs` parse suite (malformed URLs fail the parse) |
+| ✅ | Lazy schema fetching (raw bytes + content type, opaque to parsers) | `rust/crates/ferridis-protocol/src/schema.rs` | `schema.rs` test `fetches_schema_bytes_with_content_type` |
+| ✅ | Adapter-side schema serving (embedded or redirect) | `rust/crates/ferridis-adapter-sdk/src/server.rs` | `server.rs` test `serves_an_embedded_schema` |
+| ✅ | **Schema-driven request validation at the dispatch boundary** — `jsonschema 0.30` validates outbound bodies against `CapabilityRecord.input_schemas[intent]`; typed `InvalidArgs { capability, intent, details }`; lenient on malformed schemas (logs WARN, lets adapter remain final validator) | `rust/crates/ferridis-client/src/client.rs` | `client.rs` tests `validate_dispatch_body_accepts_valid_args`, `_rejects_wrong_type`, `_rejects_out_of_bounds`, `_rejects_additional_properties`, `_is_lenient_on_broken_schema` |
+| ✅ | **MCP `inputSchema` verbatim through the projection** — ferridis-client preserves MCP server schemas end-to-end so integer/typed args round-trip cleanly through the publisher | `rust/crates/ferridis-client/src/mcp/`, `rust/crates/ferridis-mcp-server/` | `projects_preserve_upstream_inputschema_verbatim` (client `mcp/mod.rs`) + `catalogue_prefers_threaded_input_schemas_over_fallback`, `catalogue_falls_back_to_hardcoded_fs_schema`, `catalogue_falls_back_to_permissive_when_no_schema_is_known` (publisher `tools.rs`) |
+| ✅ | **Adapter-SDK request validation** — `validate_body` + `ValidationOutcome` + `Capability::body_schema` hook + server gate (mirror of the client-side check, second line of defence) | `rust/crates/ferridis-adapter-sdk/src/server.rs` | `tests/validation.rs`: `valid_body_returns_valid`, `wrong_type_returns_invalid_with_errors`, `missing_required_field_returns_invalid`, `malformed_schema_is_lenient` |
+| 💡 | AsyncAPI schema fetching for event channels | future | — |
 
 ## Layer 4 — Bidirectional channels
 
-| Status | Feature | Where |
-|---|---|---|
-| ✅ | Event types + `EventPublisher` trait | `rust/crates/ferridis-adapter-sdk/src/events.rs` |
-| ✅ | Webhook event delivery | `rust/crates/ferridis-adapter-sdk/src/events.rs` |
-| ✅ | **SSE event subscriptions (server → client)** — `ferridis-protocol::events::subscribe(url)` returns `Stream<Item = Result<ServerEvent, _>>`; standard SSE wire format with multi-line `data:`, chunk-boundary handling, `\r\n` tolerance | `rust/crates/ferridis-protocol/src/events.rs` |
-| ✅ | **Manifest-declared event channels** — `event_channels: [{name, chunk_schema_url?}]` on the manifest; `Client::subscribe` rejects undeclared channels with typed `EventChannelNotDeclared` | `rust/crates/ferridis-core/src/manifest.rs`, `rust/crates/ferridis-client/src/client.rs` |
-| ✅ | **WebSocket bidi transport** — `connect_ws(url, bearer) -> WsConnection` splits into independent `WsSender`/`WsReceiver`. Typed `ClientMessage` enum upstream (`Subscribe`/`Unsubscribe`/`Ack`/`Control`); reused `ServerEvent` downstream | `rust/crates/ferridis-protocol/src/ws.rs` |
-| ✅ | **Streaming responses (request kind: `"stream"`)** — server emits ordered SSE chunks for streamed intents; `Client::dispatch_streaming` returns `Pin<Box<dyn Stream<Item = Result<Value, _>>>>`; client-side kind checks (`IntentRequiresStreaming`, `IntentNotStreaming`); MCP-backed one-shot bridge wraps `tools/call` response as a stream-of-one | `rust/crates/ferridis-client/src/client.rs`, `rust/crates/ferridis-adapter-sdk/src/server.rs` |
-| ✅ | **`Client::subscribe_ws`** — convenience on top of the WS primitive; `ClientError::WrongTransport` when the channel's declared transport is SSE | `rust/crates/ferridis-client/src/client.rs` |
-| ✅ | **Adapter-SDK WebSocket handler trait** — `WsHandler` with `WsConnId` + `WsMessage` newtypes | `rust/crates/ferridis-adapter-sdk/src/server.rs` |
-| ✅ | **SSE auto-reconnect with `Last-Event-ID` cursor** — `ReconnectCursor` + `subscribe_with_cursor` | `rust/crates/ferridis-protocol/src/events.rs` |
+| Status | Feature | Where | Enforced by |
+|---|---|---|---|
+| ✅ | Event types + `EventPublisher` trait | `rust/crates/ferridis-adapter-sdk/src/events.rs` | **NOTHING YET — exposed** (trait + types compile, but no test exercises the publishing contract) |
+| ✅ | Webhook event delivery | `rust/crates/ferridis-adapter-sdk/src/events.rs` | **NOTHING YET — exposed** (no delivery test against a receiving server) |
+| ✅ | **SSE event subscriptions (server → client)** — `ferridis-protocol::events::subscribe(url)` returns `Stream<Item = Result<ServerEvent, _>>`; standard SSE wire format with multi-line `data:`, chunk-boundary handling, `\r\n` tolerance | `rust/crates/ferridis-protocol/src/events.rs` | `events.rs` parser suite (7 tests: multi-line data, chunk boundaries, comments, `\r\n`, …) + e2e `subscribe_receives_ordered_events_over_sse` (`ferridis-client/tests/real_to_real.rs`) |
+| ✅ | **Manifest-declared event channels** — `event_channels: [{name, chunk_schema_url?}]` on the manifest; `Client::subscribe` rejects undeclared channels with typed `EventChannelNotDeclared` | `rust/crates/ferridis-core/src/manifest.rs`, `rust/crates/ferridis-client/src/client.rs` | Manifest side: `parses_manifest_with_event_channels`, `rejects_event_channel_with_invalid_name`, `rejects_duplicate_event_channel_names`; client-side undeclared-channel rejection test **NOTHING YET — exposed** |
+| ✅ | **WebSocket bidi transport** — `connect_ws(url, bearer) -> WsConnection` splits into independent `WsSender`/`WsReceiver`. Typed `ClientMessage` enum upstream; reused `ServerEvent` downstream | `rust/crates/ferridis-protocol/src/ws.rs` | **Type** (`ClientMessage` enum — illegal upstream shapes unrepresentable); + `tests/ws_bidi.rs` `bidi_round_trip_against_real_server`, `split_halves_run_concurrently`; `ws.rs` serde tests |
+| ✅ | **Streaming responses (request kind: `"stream"`)** — server emits ordered SSE chunks for streamed intents; `Client::dispatch_streaming` returns a typed stream; client-side kind checks (`IntentRequiresStreaming`, `IntentNotStreaming`); MCP-backed one-shot bridge | `rust/crates/ferridis-client/src/client.rs`, `rust/crates/ferridis-adapter-sdk/src/server.rs` | e2e `dispatch_streaming_consumes_ordered_chunks`, `adapter_dispatch_stream_round_trips_through_dispatch_streaming`, `dispatch_on_stream_kind_intent_errors_with_intent_requires_streaming` (`real_to_real.rs`) + publisher `tools_call_handles_stream_kind_intents` |
+| ✅ | **`Client::subscribe_ws`** — convenience on top of the WS primitive; `ClientError::WrongTransport` when the channel's declared transport is SSE | `rust/crates/ferridis-client/src/client.rs` | `tests/subscribe_ws_errors.rs`: `wrong_transport_is_a_distinct_error_variant`, `subscribe_ws_unregistered_capability_returns_error` |
+| ✅ | **Adapter-SDK WebSocket handler trait** — `WsHandler` with `WsConnId` + `WsMessage` newtypes | `rust/crates/ferridis-adapter-sdk/src/server.rs` | `tests/ws_handler.rs` (5 tests incl. `ws_handler_is_object_safe`) |
+| ✅ | **SSE auto-reconnect with `Last-Event-ID` cursor** — `ReconnectCursor` + `subscribe_with_cursor` | `rust/crates/ferridis-protocol/src/events.rs` | `tests/reconnect_cursor.rs` (5 cursor-type tests); resume-behavior e2e (drop mid-stream → reconnect with cursor) **NOTHING YET — exposed** |
+| ✅ | **Backpressure signal types (v0.4)** — `BackpressureSignal { Continue \| SlowDown \| Halt }` + `StreamChunk` | `rust/crates/ferridis-protocol/` | `tests/backpressure.rs` (5 tests). Not yet wired into the live streaming path — wiring is queued in [TODO.md](./TODO.md) |
 
 ## Layer 5 — Intent layer
 
-| Status | Feature | Where |
-|---|---|---|
-| ✅ | Intent → manifest matching, tier-aware (`Personal → Org → Public`) | `rust/crates/ferridis-client/src/registry.rs` |
-| ✅ | Auth-method-aware dispatch (`None` anonymous / `Oauth2` bearer / `ApiKey` typed-unsupported) | `rust/crates/ferridis-client/src/client.rs` |
-| ✅ | **Intent vocabulary v0 — drafted** (35 verbs across 8 categories: messaging, calendar, files, search, payments, identity, scheduling, common). Proposed for AAIF governance. | [`vocabulary.md`](./vocabulary.md) |
-| ✅ | **`IntentKind::Stream` plumbing through manifests + adapter SDK + client** (see Layer 4) | `rust/crates/ferridis-core/src/manifest.rs` |
-| ✅ | **Confidence scoring + tie-breaking** — `ConfidenceScore` + `ScoredCandidate`; `Registry::candidates_for_intent_scored` (Personal=100, Org=66, Public=33, lexicographic tie-breaking) | `rust/crates/ferridis-client/src/registry.rs` |
-| 💡 | Cross-capability intent transactions | future |
+| Status | Feature | Where | Enforced by |
+|---|---|---|---|
+| ✅ | Intent → manifest matching, tier-aware (`Personal → Org → Public`) | `rust/crates/ferridis-client/src/registry.rs` | `registry.rs` test `candidates_returns_only_capabilities_declaring_the_intent` + tier-ordering tests (Layer 2) |
+| ✅ | Auth-method-aware dispatch (`None` anonymous / `Oauth2` bearer / `ApiKey` typed-unsupported) | `rust/crates/ferridis-client/src/client.rs` | e2e `real_to_real.rs` dispatch suite (`register_then_resolve_intent`, `dispatch_against_unregistered_capability_fails`, `dispatch_with_intent_not_in_manifest_fails`) + `call.rs` header tests |
+| ✅ | **Intent vocabulary v0 — drafted** (35 verbs across 8 categories). Proposed for AAIF governance. | [`vocabulary.md`](./vocabulary.md) | n/a — specification document, no runtime surface (verb *syntax* is enforced by `IntentVerb`) |
+| ✅ | **`IntentKind::Stream` plumbing through manifests + adapter SDK + client** (see Layer 4) | `rust/crates/ferridis-core/src/manifest.rs` | `manifest.rs` tests `parses_mixed_flat_and_structured_intent_entries`, `rejects_stream_intent_without_chunk_schema_url`, `flat_intents_in_existing_manifests_still_parse` |
+| ✅ | **Confidence scoring + tie-breaking** — `ConfidenceScore` + `ScoredCandidate`; `Registry::candidates_for_intent_scored` (Personal=100, Org=66, Public=33, lexicographic tie-breaking) | `rust/crates/ferridis-client/src/registry.rs` | `tests/candidates_scored.rs`: `personal_scores_higher_than_public`, `confidence_score_ordering`, `scored_candidate_accessors` |
+| 💡 | Cross-capability intent transactions | future | — |
 
 ## Layer 6 — Browser / computer-use fallback
 
-| Status | Feature | Where |
-|---|---|---|
-| ✅ | Tier-used logging on every dispatch (`tracing::info!` with capability/intent/tier/auth/connection_id) | `rust/crates/ferridis-client/src/client.rs` |
-| 📋 | Per-service tier override (user-facing policy) | `ferridis-client` |
-| 💡 | Browser session driver | future |
-| 💡 | Computer-use vision driver | future |
+| Status | Feature | Where | Enforced by |
+|---|---|---|---|
+| ✅ | Tier-used logging on every dispatch (`tracing::info!` with capability/intent/tier/auth/connection_id) | `rust/crates/ferridis-client/src/client.rs` | **NOTHING YET — exposed** (no log-capture test asserts the emission) |
+| 📋 | Per-service tier override (user-facing policy) | `ferridis-client` | — |
+| 💡 | Browser session driver | future | — |
+| 💡 | Computer-use vision driver | future | — |
 
 ---
 
 ## IDE integrations
 
-| Status | Feature | Where |
-|---|---|---|
-| ✅ | **MCP-publisher shim — `ferridis-mcp-server`**. Works for any MCP-aware client (Claude Code, Zed, Cursor, MCP-supporting Copilot, claude.ai web, mobile Claude). Partial-failure-tolerant adapter registration with per-adapter 10s timeout. Stream-kind intents (e.g. the Claude-CLI adapter) are collected via `dispatch_streaming` and the final `result` text is returned alongside the full chunk array. **Two transports**: default stdio (in-editor MCP hosts) and `--http-bind` (MCP Streamable HTTP). **HTTP auth, two paths**: static `--bearer-token` for `curl`/non-OAuth callers, and `--oauth-public-base-url` to spin a full **OAuth 2.1 + PKCE (S256) + Dynamic Client Registration** authorization server alongside `/mcp` — the shape claude.ai's Custom Connectors actually require. Either or both. End-to-end-verified: claude.ai-shaped DCR → authorize → token → `/mcp` tools/call against real `claude`. | `rust/crates/ferridis-mcp-server/` |
-| ✅ | **MCP-consumer shim — `ferridis-client::mcp`**. Lets `ferridis-client` consume MCP servers as `Tier::Native` capabilities; stdio and SSE transports. **SSE session-loss auto-recovery** — on `POST → 404`, transport re-handshakes the session, replays `initialize`, retries the original call once. Live-validated against a real MCP SSE endpoint. | `rust/crates/ferridis-client/src/mcp/` |
-| ✅ | **VS Code Ferridis integration** — TypeScript extension registers `ferridis-mcp-server` with VS Code's native MCP runtime; Ferridis-connected capabilities appear as tools in Copilot Chat | `editors/vscode/` |
-| ✅ | Zed Ferridis integration (Rust → WASM extension that registers `ferridis-mcp-server` as a Zed context server) | `editors/zed/` |
-| 📋 | Zed pure-WASM Ferridis client (no subprocess) | `editors/zed/` follow-up |
+| Status | Feature | Where | Enforced by |
+|---|---|---|---|
+| ✅ | **MCP-publisher shim — `ferridis-mcp-server`**. Works for any MCP-aware client (Claude Code, Zed, Cursor, MCP-supporting Copilot, claude.ai web, mobile Claude). Partial-failure-tolerant adapter registration with per-adapter 10s timeout. Stream-kind intents collected via `dispatch_streaming`. **Two transports**: stdio and `--http-bind` (MCP Streamable HTTP). **HTTP auth, two paths**: static `--bearer-token`, and `--oauth-public-base-url` spinning a full **OAuth 2.1 + PKCE (S256) + Dynamic Client Registration** authorization server — the shape claude.ai's Custom Connectors require. End-to-end-verified: claude.ai-shaped DCR → authorize → token → `/mcp` tools/call against real `claude`. | `rust/crates/ferridis-mcp-server/` | 46 tests: `tests/end_to_end.rs` (handshake, partial failure ×2, stream-kind, iserror), `tests/http_transport.rs` (incl. `publisher_refuses_http_bind_without_bearer`), `tests/http_oauth.rs` (full OAuth dance, PKCE mismatch, redirect allow-list), inline `oauth_server.rs` suite (single-use codes, plain-PKCE rejection, …) |
+| ✅ | **MCP-consumer shim — `ferridis-client::mcp`**. Consumes MCP servers as `Tier::Native` capabilities; stdio and SSE transports. **SSE session-loss auto-recovery** — on `POST → 404`, re-handshake, replay `initialize`, retry once. | `rust/crates/ferridis-client/src/mcp/` | e2e `consumes_our_own_mcp_server_over_stdio_end_to_end` (`tests/mcp_consumer.rs`), `sse_transport_reconnects_after_session_expiry` (`real_to_real.rs`), projection suite in `mcp/mod.rs` (8 tests incl. collision detection) |
+| ✅ | **VS Code Ferridis integration** — TypeScript extension registers `ferridis-mcp-server` with VS Code's native MCP runtime; capabilities appear as tools in Copilot Chat | `editors/vscode/` | **NOTHING YET — exposed** (manual end-to-end verification only; no automated extension tests) |
+| ✅ | Zed Ferridis integration (Rust → WASM extension that registers `ferridis-mcp-server` as a Zed context server) | `editors/zed/` | **NOTHING YET — exposed** (manual verification only) |
+| 📋 | Zed pure-WASM Ferridis client (no subprocess) | `editors/zed/` follow-up | — |
 
 The MCP-publisher shim is the headline integration: drop the binary path into your client's MCP server config (e.g. `~/.claude.json`'s `mcpServers`) alongside any other MCP server you already use, and Ferridis-connected capabilities appear as MCP tools in the same session. Verified end-to-end in Claude Code in VS Code with multiple MCP servers running side by side.
 
@@ -110,14 +113,14 @@ The VS Code extension takes the native MCP path: it registers `ferridis-mcp-serv
 
 ## Reference adapters
 
-| Status | Adapter | Notes |
-|---|---|---|
-| ✅ | Filesystem (`ferridis-adapter-fs`) | First end-to-end demo. Five intents: `read-file`, `write-file`, `list-dir`, `search-files`, `move-file`. Path-traversal protection via the `Root` / `RelPath` typestate. 7 integration tests pass against a real HTTP server. systemd user unit ships for auto-start. |
-| ✅ | **Claude Code CLI (`ferridis-adapter-claude-cli`)** | Drives the `claude` CLI as a stream-kind Ferridis capability. Two intents: `submit-prompt` (fresh session) and `resume-session` (continue by id), both streaming the CLI's `--output-format stream-json --verbose` events as ordered chunks over SSE. Typestate-validated inputs (`Prompt`, `AllowedCwd` against operator-supplied allow-list, `Model` enum gated by `ModelAllowList`, UUID-validated `SessionId`). **Stopgap for remote-controlling Claude Code while editor agent panels (Zed, Cursor, others) lack a public extension API for their assistant surface.** Verified end-to-end against a real `claude` install: prompt → PONG result + session_id, then resume-session continues the same conversation with cache-read evidence. 7 unit + 3 hermetic e2e tests against a stub script + 1 `#[ignore]`'d live test. |
-| ✅ | **Google Calendar (`ferridis-adapter-google-calendar`)** | 6 intents: `list-calendars`, `list-events`, `get-event`, `create-event`, `update-event`, `delete-event`. OAuth 2.0 access token held server-side; optional refresh credentials (refresh token + client ID + client secret) for automatic token renewal on 401. `--api-base-url` override for proxies. Default port 7828. 7 unit + 9 e2e tests via wiremock. |
-| ✅ | **Slack (`ferridis-adapter-slack`)** | 6 intents: `list-channels`, `post-message`, `get-messages`, `send-dm`, `get-channel-info`, `list-users`. Long-lived bot token (xoxb-) held server-side (local-trust model). `send-dm` is a two-step operation: `conversations.open` → `chat.postMessage`. Slack's always-200 error model handled transparently in the client layer. Default port 7829. 2 unit + 9 e2e tests via wiremock. |
-| ✅ | **GitHub (`ferridis-adapter-github`)** | 6 intents: `list-repos`, `get-file`, `list-issues`, `create-issue`, `list-pull-requests`, `search-code`. PAT held server-side (local-trust model). `--api-base-url` for GitHub Enterprise. Broker self-registration. 7 unit + 8 e2e tests via wiremock. Default port 7827. |
-| ✅ | **Notion (`ferridis-adapter-notion`)** | 6 intents: `list-databases`, `query-database`, `get-page`, `create-page`, `update-page`, `search`. Integration token held server-side (local-trust model). Mandatory `Notion-Version: 2022-06-28` header on every request. `query-database` and `update-page` strip routing fields before forwarding to the API. Default port 7830. 4 unit + 9 e2e tests via wiremock. |
+| Status | Adapter | Notes | Enforced by |
+|---|---|---|---|
+| ✅ | Filesystem (`ferridis-adapter-fs`) | First end-to-end demo. Five intents: `read-file`, `write-file`, `list-dir`, `search-files`, `move-file`. systemd user unit ships for auto-start. | **Type** — `Root`/`RelPath` typestate makes path escape unrepresentable; + `path.rs` tests (6, incl. `rejects_escape_via_parent_dir`) + `tests/end_to_end.rs` (7, incl. `refuses_path_traversal_escape`, `undeclared_intent_returns_404`) against a real HTTP server |
+| ✅ | **Claude Code CLI (`ferridis-adapter-claude-cli`)** | Drives the `claude` CLI as a stream-kind capability. Two intents: `submit-prompt`, `resume-session`, streaming `--output-format stream-json` events as ordered SSE chunks. **Stopgap for remote-controlling Claude Code while editor agent panels lack a public extension API.** Verified live: prompt → PONG + session_id, then resume continues the conversation. | **Type** — `Prompt`/`AllowedCwd`/`Model`(allow-list)/`SessionId`(UUID) typestate at the dispatch boundary; + `input.rs` tests (7) + `tests/stream_round_trip.rs` (3 hermetic e2e against a stub `claude` + 1 `#[ignore]`'d live test) |
+| ✅ | **Google Calendar (`ferridis-adapter-google-calendar`)** | 6 intents. OAuth 2.0 access token held server-side; optional refresh credentials for automatic renewal on 401. `--api-base-url` override for proxies. Default port 7828. | `types.rs` parser tests (7) + `tests/google_calendar_adapter.rs` (9 wiremock e2e, incl. `create_event_strips_routing_fields`, `missing_required_field_returns_400`) |
+| ✅ | **Slack (`ferridis-adapter-slack`)** | 6 intents. Long-lived bot token (xoxb-) held server-side (local-trust model). `send-dm` two-step: `conversations.open` → `chat.postMessage`. Slack's always-200 error model handled transparently. Default port 7829. | `types.rs` parser tests (2) + `tests/slack_adapter.rs` (9 wiremock e2e, incl. `send_dm_opens_channel_then_posts`, `missing_channel_returns_400`) |
+| ✅ | **GitHub (`ferridis-adapter-github`)** | 6 intents. PAT held server-side (local-trust model). `--api-base-url` for GitHub Enterprise. Broker self-registration. Default port 7827. | `types.rs` parser tests (7) + `tests/github_adapter.rs` (8 wiremock e2e, incl. `get_file_decodes_base64_content`, `unknown_intent_returns_404`) |
+| ✅ | **Notion (`ferridis-adapter-notion`)** | 6 intents. Integration token held server-side (local-trust model). Mandatory `Notion-Version: 2022-06-28` header. `query-database` and `update-page` strip routing fields before forwarding. Default port 7830. | `types.rs` parser tests (4) + `tests/notion_adapter.rs` (9 wiremock e2e, incl. `update_page_strips_page_id_and_patches`, `missing_database_id_returns_400`) |
 
 ---
 
@@ -125,14 +128,16 @@ The VS Code extension takes the native MCP path: it registers `ferridis-mcp-serv
 
 These are the gaps that v0.1 deliberately deferred, now closed:
 
-- ✅ Tightened `serde(transparent)` newtypes (`IntentVerb`, `Category`, `Summary`, `CapabilityVersion`) to use `try_from = "String"` so direct deserialization runs validation. Catches malformed JSON like `"Send_Message"` at the deserialize boundary.
-- ✅ Schema-driven request validation at the client dispatch boundary (`jsonschema 0.30`, `InvalidArgs` error).
+- ✅ Tightened `serde(transparent)` newtypes (`IntentVerb`, `Category`, `Summary`, `CapabilityVersion`) to use `try_from = "String"` so direct deserialization runs validation. Enforced by the `*_deserialize_runs_through_validator` regression tests in `ferridis-core`.
+- ✅ Schema-driven request validation at the client dispatch boundary (`jsonschema 0.30`, `InvalidArgs` error) — see Layer 3.
 - ✅ Manifest signing format and verification (Sigstore — see Layer 2).
 - ✅ Streaming response schema language (see Layer 4).
-- ✅ HTTP-client pooling hardening: `pool_idle_timeout(15s)`, `pool_max_idle_per_host(2)`, `connect_timeout(5s)` to prevent the stale-keepalive wedge symptom seen during adapter restarts.
-- ✅ **CRL-based certificate revocation (v0.6).** `RevocationMode` enum (BestEffort/Required/Skip), `CrlData` opaque newtype, `extract_cdp_url`, `fetch_crl`, `check_cert_not_revoked`, `verify_signed_manifest_with_revocation`. Sigstore signing now does revocation by default.
+- ✅ HTTP-client pooling hardening: `pool_idle_timeout(15s)`, `pool_max_idle_per_host(2)`, `connect_timeout(5s)` to prevent the stale-keepalive wedge symptom seen during adapter restarts. Constants are public with rationale doc-comments; behavior regression test **NOTHING YET — exposed**.
+- ✅ **CRL-based certificate revocation (v0.6).** `RevocationMode` enum, `CrlData` opaque newtype, `verify_signed_manifest_with_revocation`. Enforced by the `signing.rs` revocation tests (`cert_in_crl_fails_revocation_check`, `cert_not_in_crl_passes_revocation_check`, mode-default tests).
 
 ## Still queued
 
 - 📋 CT log validation (CRL revocation shipped v0.6; CT log check is the remaining gap).
+- 📋 Close the **NOTHING YET — exposed** gaps above (mirrored in [TODO.md](./TODO.md)): stdio-bridge test suite, event-publisher/webhook delivery tests, token-redaction regression test, undeclared-event-channel rejection test, SSE reconnect resume-behavior e2e, broker heartbeat e2e, tier-used log-capture test, editor-extension automated tests, pool-hardening regression test.
+- 📋 Property-based tests (`proptest`) for the parser boundaries (`IntentVerb`, `CapabilityRef`, `Manifest`, SSE parser) — the workspace currently has none; round-trip and rejection laws belong at that layer.
 - 💡 Local-capability trust model.

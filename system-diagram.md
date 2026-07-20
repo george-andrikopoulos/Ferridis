@@ -30,4 +30,16 @@ When the user asks Claude Code in VS Code to read a file via Ferridis:
 6. **`ferridis-adapter-fs`** translates the intent into a filesystem read, with `RelPath` enforcing that the path cannot escape `Root`.
 7. The response travels back up the same stack.
 
-The same flow runs for Copilot and Zed; the only difference is which shim binary sits between the AI panel and `ferridis-client`.
+The same flow runs for Copilot and Zed; the only difference is which shim binary sits between the AI panel and `ferridis-client` — `ferridis-cli` (JSON-RPC over stdio) for the VS Code extension's Copilot path, `ferridis-mcp-server` for Claude Code and Zed.
+
+## Crate inventory (kept in sync with `rust/crates/`)
+
+Fourteen crates. The diagram shows the fs-adapter call path; the full set is:
+
+- **Types:** `ferridis-core`
+- **Wire:** `ferridis-protocol`
+- **Frameworks:** `ferridis-adapter-sdk` (publisher), `ferridis-client` (consumer)
+- **Adapters:** `ferridis-adapter-fs`, `ferridis-adapter-claude-cli`, `ferridis-adapter-google-calendar`, `ferridis-adapter-slack`, `ferridis-adapter-github`, `ferridis-adapter-notion`
+- **Binaries:** `ferridis-cli` (sidecar), `ferridis-mcp-server` (MCP publisher shim), `ferridis-discovery-broker` (port 7825), `ferridis-stdio-bridge` (port 7826)
+
+Full crate topology and dependency layering: [architecture.md](./architecture.md#workspace-code-architecture).
