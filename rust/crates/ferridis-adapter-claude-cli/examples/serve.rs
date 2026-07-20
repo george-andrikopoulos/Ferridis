@@ -183,14 +183,13 @@ fn parse_args(argv: Vec<String>) -> Result<Args, String> {
             "--discovery-broker" => {
                 let v = it.next().ok_or("--discovery-broker expects a URL")?;
                 discovery_broker = Some(
-                    BrokerUrl::parse(&v)
-                        .map_err(|e| format!("--discovery-broker `{v}`: {e}"))?,
+                    BrokerUrl::parse(&v).map_err(|e| format!("--discovery-broker `{v}`: {e}"))?,
                 );
             }
             "--service-name" => {
                 let v = it.next().ok_or("--service-name expects a name")?;
-                service_name = ServiceName::parse(&v)
-                    .map_err(|e| format!("--service-name `{v}`: {e}"))?;
+                service_name =
+                    ServiceName::parse(&v).map_err(|e| format!("--service-name `{v}`: {e}"))?;
             }
             "--pinned" => pinned = true,
             "-h" | "--help" => {
@@ -225,12 +224,22 @@ fn print_usage() {
     eprintln!("  --bind ADDR:PORT          where to listen (e.g. 127.0.0.1:7823)");
     eprintln!();
     eprintln!("optional:");
-    eprintln!("  --allowed-cwd PATH        operator-allowed root for client-supplied cwd; repeatable");
+    eprintln!(
+        "  --allowed-cwd PATH        operator-allowed root for client-supplied cwd; repeatable"
+    );
     eprintln!("  --default-cwd PATH        cwd to use when the client doesn't supply one");
-    eprintln!("  --default-model ALIAS     model alias for clients that don't supply one (sonnet/opus/haiku)");
-    eprintln!("  --model-alias ALIAS       extend the model allow-list with a custom alias; repeatable");
+    eprintln!(
+        "  --default-model ALIAS     model alias for clients that don't supply one (sonnet/opus/haiku)"
+    );
+    eprintln!(
+        "  --model-alias ALIAS       extend the model allow-list with a custom alias; repeatable"
+    );
     eprintln!("  --claude-binary PATH      override the `claude` binary path");
     eprintln!("  --discovery-broker URL    register with a Ferridis discovery broker");
-    eprintln!("  --service-name NAME       broker registration name (default: ferridis-claude-cli)");
-    eprintln!("  --pinned                  make the broker registration persistent (default: ephemeral)");
+    eprintln!(
+        "  --service-name NAME       broker registration name (default: ferridis-claude-cli)"
+    );
+    eprintln!(
+        "  --pinned                  make the broker registration persistent (default: ephemeral)"
+    );
 }

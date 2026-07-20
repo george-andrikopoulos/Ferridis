@@ -178,9 +178,13 @@ pub struct NotionCapability {
 impl NotionCapability {
     /// Build a capability from an integration token.
     pub fn new(token: IntegrationToken) -> Result<Self, DispatchError> {
-        let manifest = Manifest::parse(DEFAULT_MANIFEST_JSON)
-            .map_err(|e| DispatchError::Internal(format!("default manifest failed to parse: {e}")))?;
-        Ok(Self { manifest, client: NotionClient::new(token) })
+        let manifest = Manifest::parse(DEFAULT_MANIFEST_JSON).map_err(|e| {
+            DispatchError::Internal(format!("default manifest failed to parse: {e}"))
+        })?;
+        Ok(Self {
+            manifest,
+            client: NotionClient::new(token),
+        })
     }
 
     /// Override the Notion API base URL (for tests).
@@ -207,11 +211,7 @@ impl Capability for NotionCapability {
         }
     }
 
-    async fn dispatch(
-        &self,
-        intent: &IntentVerb,
-        body: Value,
-    ) -> Result<Value, DispatchError> {
+    async fn dispatch(&self, intent: &IntentVerb, body: Value) -> Result<Value, DispatchError> {
         match intent.as_str() {
             "list-databases" => self.client.list_databases().await.map_err(to_dispatch),
 
@@ -221,7 +221,10 @@ impl Capability for NotionCapability {
                 if let Some(obj) = forward.as_object_mut() {
                     obj.remove("database_id");
                 }
-                self.client.query_database(&database_id, forward).await.map_err(to_dispatch)
+                self.client
+                    .query_database(&database_id, forward)
+                    .await
+                    .map_err(to_dispatch)
             }
 
             "get-page" => {
@@ -237,7 +240,10 @@ impl Capability for NotionCapability {
                 if let Some(obj) = forward.as_object_mut() {
                     obj.remove("page_id");
                 }
-                self.client.update_page(&page_id, forward).await.map_err(to_dispatch)
+                self.client
+                    .update_page(&page_id, forward)
+                    .await
+                    .map_err(to_dispatch)
             }
 
             "search" => self.client.search(body).await.map_err(to_dispatch),

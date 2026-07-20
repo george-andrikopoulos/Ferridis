@@ -43,6 +43,4 @@ pub mod capability;
 pub mod input;
 
 pub use capability::{CAPABILITY_ID, ClaudeCliCapability, ClaudeCliConfig};
-pub use input::{
-    AllowedCwd, AllowedRoots, InputError, Model, ModelAllowList, Prompt, SessionId,
-};
+pub use input::{AllowedCwd, AllowedRoots, InputError, Model, ModelAllowList, Prompt, SessionId};

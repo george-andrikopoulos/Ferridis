@@ -154,7 +154,10 @@ mod tests {
     fn rejects_escape_via_parent_dir() {
         let (_d, r) = root();
         assert!(matches!(r.resolve("../etc"), Err(PathError::Escapes(_))));
-        assert!(matches!(r.resolve("a/../../etc"), Err(PathError::Escapes(_))));
+        assert!(matches!(
+            r.resolve("a/../../etc"),
+            Err(PathError::Escapes(_))
+        ));
     }
 
     #[test]

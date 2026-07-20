@@ -437,11 +437,7 @@ async fn register_from_mesh_verifies_signed_manifest_and_tags_public() {
             get(move || {
                 let m = manifest_owned.clone();
                 async move {
-                    (
-                        [(header::CONTENT_TYPE, "application/json")],
-                        Bytes::from(m),
-                    )
-                        .into_response()
+                    ([(header::CONTENT_TYPE, "application/json")], Bytes::from(m)).into_response()
                 }
             }),
         )
@@ -450,11 +446,7 @@ async fn register_from_mesh_verifies_signed_manifest_and_tags_public() {
             get(move || {
                 let b = bundle_owned.clone();
                 async move {
-                    (
-                        [(header::CONTENT_TYPE, "application/json")],
-                        Bytes::from(b),
-                    )
-                        .into_response()
+                    ([(header::CONTENT_TYPE, "application/json")], Bytes::from(b)).into_response()
                 }
             }),
         );
@@ -705,11 +697,7 @@ async fn federated_mesh_falls_through_on_404_and_returns_from_next_tier() {
             get(move || {
                 let m = manifest_owned.clone();
                 async move {
-                    (
-                        [(header::CONTENT_TYPE, "application/json")],
-                        Bytes::from(m),
-                    )
-                        .into_response()
+                    ([(header::CONTENT_TYPE, "application/json")], Bytes::from(m)).into_response()
                 }
             }),
         )
@@ -718,11 +706,7 @@ async fn federated_mesh_falls_through_on_404_and_returns_from_next_tier() {
             get(move || {
                 let b = bundle_owned.clone();
                 async move {
-                    (
-                        [(header::CONTENT_TYPE, "application/json")],
-                        Bytes::from(b),
-                    )
-                        .into_response()
+                    ([(header::CONTENT_TYPE, "application/json")], Bytes::from(b)).into_response()
                 }
             }),
         );
@@ -737,10 +721,7 @@ async fn federated_mesh_falls_through_on_404_and_returns_from_next_tier() {
         http.clone(),
         Url::parse(&format!("http://{mesh_a_addr}/")).unwrap(),
     );
-    let mesh_b = MeshClient::new(
-        http,
-        Url::parse(&format!("http://{mesh_b_addr}/")).unwrap(),
-    );
+    let mesh_b = MeshClient::new(http, Url::parse(&format!("http://{mesh_b_addr}/")).unwrap());
     let federation = FederatedMesh::new(vec![mesh_a, mesh_b]);
 
     let cap = CapabilityRef::parse(cap_str).unwrap();
@@ -757,8 +738,8 @@ async fn federated_mesh_capability_not_found_when_no_tier_has_it() {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
     use axum::routing::get;
-    use ferridis_protocol::{Client as HttpClient, FederatedMesh, MeshClient};
     use ferridis_protocol::ProtocolError;
+    use ferridis_protocol::{Client as HttpClient, FederatedMesh, MeshClient};
 
     // Both meshes 404 for everything.
     let app = || {
@@ -822,7 +803,9 @@ async fn dispatch_streaming_consumes_ordered_chunks() {
     let stream_handler = move || async move {
         let events = futures_util::stream::iter(vec![
             Ok::<_, Infallible>(
-                SseEvent::default().event("chunk").data(r#"{"id":"d1","score":0.9}"#),
+                SseEvent::default()
+                    .event("chunk")
+                    .data(r#"{"id":"d1","score":0.9}"#),
             ),
             Ok(SseEvent::default()
                 .event("chunk")
@@ -830,9 +813,7 @@ async fn dispatch_streaming_consumes_ordered_chunks() {
             Ok(SseEvent::default()
                 .event("chunk")
                 .data(r#"{"id":"d3","score":0.7}"#)),
-            Ok(SseEvent::default()
-                .event("end")
-                .data(r#"{"total":3}"#)),
+            Ok(SseEvent::default().event("end").data(r#"{"total":3}"#)),
         ]);
         Sse::new(events).keep_alive(
             KeepAlive::new()
@@ -1008,11 +989,7 @@ async fn register_from_federated_mesh_falls_through_to_next_tier_and_tags_public
             get(move || {
                 let m = manifest_owned.clone();
                 async move {
-                    (
-                        [(header::CONTENT_TYPE, "application/json")],
-                        Bytes::from(m),
-                    )
-                        .into_response()
+                    ([(header::CONTENT_TYPE, "application/json")], Bytes::from(m)).into_response()
                 }
             }),
         )
@@ -1021,11 +998,7 @@ async fn register_from_federated_mesh_falls_through_to_next_tier_and_tags_public
             get(move || {
                 let b = bundle_owned.clone();
                 async move {
-                    (
-                        [(header::CONTENT_TYPE, "application/json")],
-                        Bytes::from(b),
-                    )
-                        .into_response()
+                    ([(header::CONTENT_TYPE, "application/json")], Bytes::from(b)).into_response()
                 }
             }),
         );
@@ -1040,10 +1013,7 @@ async fn register_from_federated_mesh_falls_through_to_next_tier_and_tags_public
         http.clone(),
         Url::parse(&format!("http://{mesh_a_addr}/")).unwrap(),
     );
-    let mesh_b = MeshClient::new(
-        http,
-        Url::parse(&format!("http://{mesh_b_addr}/")).unwrap(),
-    );
+    let mesh_b = MeshClient::new(http, Url::parse(&format!("http://{mesh_b_addr}/")).unwrap());
     let federation = FederatedMesh::new(vec![mesh_a, mesh_b]);
 
     let cap = CapabilityRef::parse(cap_str).unwrap();
@@ -1146,8 +1116,7 @@ async fn adapter_dispatch_stream_round_trips_through_dispatch_streaming() {
     // Register the capability through ferridis-client, then exercise
     // dispatch_streaming.
     let client = Client::ephemeral();
-    let cap_ref =
-        CapabilityRef::parse("ferridis://public.ferridis.io/sdk-stream/test@v1").unwrap();
+    let cap_ref = CapabilityRef::parse("ferridis://public.ferridis.io/sdk-stream/test@v1").unwrap();
     let manifest_url = Url::parse(&format!("http://{addr}/manifest.json")).unwrap();
     let base_url = Url::parse(&format!("http://{addr}/")).unwrap();
     client

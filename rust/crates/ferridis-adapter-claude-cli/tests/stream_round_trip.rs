@@ -219,8 +219,8 @@ where
         while let Some(idx) = find_double_newline(&buf) {
             let raw: Vec<u8> = buf.drain(..idx + 2).collect();
             // Strip the trailing blank line.
-            let block = std::str::from_utf8(&raw[..raw.len() - 2])
-                .expect("SSE block must be UTF-8");
+            let block =
+                std::str::from_utf8(&raw[..raw.len() - 2]).expect("SSE block must be UTF-8");
             let mut name = "message".to_string();
             let mut data_parts: Vec<&str> = Vec::new();
             for line in block.split('\n') {

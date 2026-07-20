@@ -37,6 +37,8 @@ use std::time::Duration;
 async fn mdns_scanner_starts_and_stops() {
     let (scanner, mut rx) = MdnsScanner::start();
     // Let it run briefly — no guarantee of receiving anything on CI
-    tokio::time::timeout(Duration::from_millis(200), rx.recv()).await.ok();
+    tokio::time::timeout(Duration::from_millis(200), rx.recv())
+        .await
+        .ok();
     drop(scanner);
 }

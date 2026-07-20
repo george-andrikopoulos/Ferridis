@@ -9,9 +9,9 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tracing::{error, info, warn};
 
 use crate::protocol::{
-    ContentPart, Inbound, InitializeResult, PROTOCOL_VERSION, Response, SERVER_NAME, SERVER_VERSION,
-    ServerCapabilities, ServerInfo, Tool, ToolsCallParams, ToolsCallResult, ToolsCapability,
-    ToolsListResult, codes,
+    ContentPart, Inbound, InitializeResult, PROTOCOL_VERSION, Response, SERVER_NAME,
+    SERVER_VERSION, ServerCapabilities, ServerInfo, Tool, ToolsCallParams, ToolsCallResult,
+    ToolsCapability, ToolsListResult, codes,
 };
 use crate::tools::ToolCatalogue;
 
@@ -122,7 +122,11 @@ impl Server {
             "tools/call" => self.handle_tools_call(id, msg.params).await,
             other => {
                 warn!(method = %other, "method not found");
-                Response::error(id, codes::METHOD_NOT_FOUND, format!("unknown method: {other}"))
+                Response::error(
+                    id,
+                    codes::METHOD_NOT_FOUND,
+                    format!("unknown method: {other}"),
+                )
             }
         }
     }
@@ -278,15 +282,16 @@ impl Server {
                     .or_else(|| {
                         let mut acc = String::new();
                         for c in &chunks {
-                            if c.get("type") != Some(&serde_json::Value::String("assistant".into())) {
+                            if c.get("type") != Some(&serde_json::Value::String("assistant".into()))
+                            {
                                 continue;
                             }
-                            if let Some(content) = c
-                                .pointer("/message/content")
-                                .and_then(|v| v.as_array())
+                            if let Some(content) =
+                                c.pointer("/message/content").and_then(|v| v.as_array())
                             {
                                 for part in content {
-                                    if part.get("type") == Some(&serde_json::Value::String("text".into()))
+                                    if part.get("type")
+                                        == Some(&serde_json::Value::String("text".into()))
                                         && let Some(t) = part.get("text").and_then(|v| v.as_str())
                                     {
                                         acc.push_str(t);
@@ -296,7 +301,12 @@ impl Server {
                         }
                         if acc.is_empty() { None } else { Some(acc) }
                     })
-                    .unwrap_or_else(|| format!("(stream produced {} chunks with no result text)", chunks.len()));
+                    .unwrap_or_else(|| {
+                        format!(
+                            "(stream produced {} chunks with no result text)",
+                            chunks.len()
+                        )
+                    });
 
                 Ok(serde_json::json!({
                     "result": final_text,

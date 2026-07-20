@@ -28,5 +28,8 @@ fn wrong_transport_is_a_distinct_error_variant() {
         requested: ChannelTransport::WebSocket,
     };
     let msg = err.to_string();
-    assert!(msg.contains("state-changed"), "error message should include channel name");
+    assert!(
+        msg.contains("state-changed"),
+        "error message should include channel name"
+    );
 }

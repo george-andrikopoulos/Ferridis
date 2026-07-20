@@ -107,7 +107,9 @@ pub struct ToolsCallResult {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ContentPart {
-    Text { text: String },
+    Text {
+        text: String,
+    },
     #[serde(other)]
     Unknown,
 }

@@ -1,6 +1,6 @@
 //! RED tests for Task 2 — adapter-SDK request validation (v0.4).
 
-use ferridis_adapter_sdk::validation::{validate_body, ValidationOutcome};
+use ferridis_adapter_sdk::validation::{ValidationOutcome, validate_body};
 use serde_json::json;
 
 #[test]

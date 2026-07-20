@@ -47,10 +47,16 @@ async fn main() {
     let client_secret = std::env::var("GOOGLE_OAUTH_CLIENT_SECRET").ok();
 
     if let (Some(rt), Some(cid), Some(cs)) = (refresh_token, client_id, client_secret) {
-        match (RefreshToken::parse(rt), ClientId::parse(cid), ClientSecret::parse(cs)) {
+        match (
+            RefreshToken::parse(rt),
+            ClientId::parse(cid),
+            ClientSecret::parse(cs),
+        ) {
             (Ok(rt), Ok(cid), Ok(cs)) => {
                 cap = cap.with_oauth_credentials(OAuthCredentials::new(rt, cid, cs));
-                tracing::info!("OAuth refresh credentials loaded — automatic token renewal enabled");
+                tracing::info!(
+                    "OAuth refresh credentials loaded — automatic token renewal enabled"
+                );
             }
             (rt, cid, cs) => {
                 for e in [rt.err(), cid.err(), cs.err()].into_iter().flatten() {
@@ -105,14 +111,18 @@ async fn main() {
                 Ok(r) if r.status().is_success() => {
                     tracing::info!(%broker, "registered with discovery broker");
                 }
-                Ok(r) => tracing::warn!(%broker, status = %r.status(), "broker registration failed"),
+                Ok(r) => {
+                    tracing::warn!(%broker, status = %r.status(), "broker registration failed")
+                }
                 Err(e) => tracing::warn!(%broker, error = %e, "broker registration error"),
             }
         });
     }
 
-    axum::serve(listener, server.into_router()).await.unwrap_or_else(|e| {
-        eprintln!("server error: {e}");
-        std::process::exit(1);
-    });
+    axum::serve(listener, server.into_router())
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("server error: {e}");
+            std::process::exit(1);
+        });
 }

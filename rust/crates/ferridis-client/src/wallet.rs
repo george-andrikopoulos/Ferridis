@@ -156,8 +156,7 @@ impl Wallet {
         stored: StoredConnection,
     ) -> Result<Option<StoredConnection>, ClientError> {
         let key = stored.capability().to_string();
-        let value = serde_json::to_string(&stored)
-            .map_err(|e| ClientError::Json(e.to_string()))?;
+        let value = serde_json::to_string(&stored).map_err(|e| ClientError::Json(e.to_string()))?;
         self.store.set(&key, &value)?;
         let prior_idx = self
             .connections
@@ -207,7 +206,8 @@ impl Wallet {
     /// Project the stored connection for `capability` into a
     /// [`Connection<Authorized>`], if one exists in that state.
     pub fn authorized(&self, capability: &CapabilityRef) -> Option<Connection<Authorized>> {
-        self.find(capability).and_then(StoredConnection::as_authorized)
+        self.find(capability)
+            .and_then(StoredConnection::as_authorized)
     }
 
     /// Project the stored connection for `capability` into a
@@ -295,7 +295,10 @@ mod tests {
         assert!(w.insert(first).unwrap().is_none());
 
         let second = authed("a");
-        let replaced = w.insert(second).unwrap().expect("first conn must be returned");
+        let replaced = w
+            .insert(second)
+            .unwrap()
+            .expect("first conn must be returned");
         assert_eq!(replaced.id(), first_id);
         assert_eq!(w.len(), 1);
     }
@@ -346,7 +349,10 @@ mod tests {
         let path = dir.path().join("wallet.json");
         std::fs::write(&path, r#"{"wallet_version":1,"connections":[]}"#).unwrap();
         let err = Wallet::detect_legacy_plaintext(&path).unwrap_err();
-        assert!(matches!(err, ClientError::LegacyPlaintextWalletDetected { .. }));
+        assert!(matches!(
+            err,
+            ClientError::LegacyPlaintextWalletDetected { .. }
+        ));
     }
 
     #[test]

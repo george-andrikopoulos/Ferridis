@@ -8,7 +8,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{Mutex, broadcast};
 
 const DEFAULT_TTL: Duration = Duration::from_secs(300);
 
@@ -32,7 +32,12 @@ pub struct RegisterRequest {
 impl RegisterRequest {
     /// Construct a register request (used by tests and the axum JSON extractor).
     pub fn new(name: impl Into<String>, kind: impl Into<String>, url: impl Into<String>) -> Self {
-        Self { name: name.into(), kind: kind.into(), url: url.into(), persistent: None }
+        Self {
+            name: name.into(),
+            kind: kind.into(),
+            url: url.into(),
+            persistent: None,
+        }
     }
 
     /// Mark this request as persistent (pinned — survives TTL and restarts).
@@ -86,7 +91,10 @@ pub struct ServiceEntry {
 
 impl ServiceEntry {
     fn new(service: DiscoveredService, persistent: bool) -> Self {
-        Self { service, persistent }
+        Self {
+            service,
+            persistent,
+        }
     }
 
     pub fn service(&self) -> &DiscoveredService {
@@ -120,7 +128,12 @@ impl ServiceStore {
     /// Create an ephemeral store with a custom TTL (useful in tests to simulate expiry instantly).
     pub fn new_with_ttl(ttl: Duration) -> Self {
         let (tx, _) = broadcast::channel(256);
-        Self { inner: Arc::new(Mutex::new(HashMap::new())), tx, state_path: None, ttl }
+        Self {
+            inner: Arc::new(Mutex::new(HashMap::new())),
+            tx,
+            state_path: None,
+            ttl,
+        }
     }
 
     /// Create a store backed by a JSON state file at `path` (default TTL).
@@ -175,7 +188,13 @@ impl ServiceStore {
                 Err(_) => continue,
             };
             let svc = DiscoveredService::new(req.name.clone(), kind, url); // clone: name moved into map key
-            map.insert(req.name, Entry { service: svc, lifetime: Lifetime::Pinned });
+            map.insert(
+                req.name,
+                Entry {
+                    service: svc,
+                    lifetime: Lifetime::Pinned,
+                },
+            );
         }
         Ok(count)
     }
@@ -184,11 +203,12 @@ impl ServiceStore {
     /// and atomically persists to the state file (if configured).
     pub async fn register(&self, req: RegisterRequest) -> Result<(), BrokerError> {
         let kind = parse_kind(&req.kind)?;
-        let url =
-            url::Url::parse(&req.url).map_err(|e| BrokerError::InvalidUrl(e.to_string()))?;
+        let url = url::Url::parse(&req.url).map_err(|e| BrokerError::InvalidUrl(e.to_string()))?;
         let lifetime = match req.persistent.unwrap_or(false) {
             true => Lifetime::Pinned,
-            false => Lifetime::Ephemeral { expires_at: Instant::now() + self.ttl },
+            false => Lifetime::Ephemeral {
+                expires_at: Instant::now() + self.ttl,
+            },
         };
         let svc = DiscoveredService::new(req.name.clone(), kind, url); // clone: name moved into map key below
         let entry = Entry {
@@ -221,10 +241,12 @@ impl ServiceStore {
             .await
             .values()
             .filter(|e| e.lifetime.is_live(now))
-            .map(|e| ServiceEntry::new(
-                e.service.clone(), // clone: returning owned Vec from behind mutex guard
-                e.lifetime.is_pinned(),
-            ))
+            .map(|e| {
+                ServiceEntry::new(
+                    e.service.clone(), // clone: returning owned Vec from behind mutex guard
+                    e.lifetime.is_pinned(),
+                )
+            })
             .collect()
     }
 
@@ -256,11 +278,17 @@ impl ServiceStore {
         };
         let json = serde_json::to_vec_pretty(&requests).map_err(BrokerError::Json)?;
         if let Some(parent) = path.parent() {
-            tokio::fs::create_dir_all(parent).await.map_err(BrokerError::Io)?;
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(BrokerError::Io)?;
         }
         let tmp_path = PathBuf::from(format!("{}.tmp", path.display()));
-        tokio::fs::write(&tmp_path, &json).await.map_err(BrokerError::Io)?;
-        tokio::fs::rename(&tmp_path, path.as_ref()).await.map_err(BrokerError::Io)?;
+        tokio::fs::write(&tmp_path, &json)
+            .await
+            .map_err(BrokerError::Io)?;
+        tokio::fs::rename(&tmp_path, path.as_ref())
+            .await
+            .map_err(BrokerError::Io)?;
         Ok(())
     }
 }

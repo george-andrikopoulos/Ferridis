@@ -19,7 +19,10 @@ pub(crate) struct SlackClient {
 impl SlackClient {
     pub(crate) fn new(token: BotToken) -> Self {
         let http = reqwest::Client::builder()
-            .user_agent(concat!("ferridis-adapter-slack/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!(
+                "ferridis-adapter-slack/",
+                env!("CARGO_PKG_VERSION")
+            ))
             .build()
             .expect("build reqwest client"); // allow:unwrap static config — never fails
         Self {
@@ -41,9 +44,10 @@ impl SlackClient {
     ) -> Result<Value, SlackError> {
         let mut url = format!("{}/conversations.list", self.api_base_url);
         let limit_str;
-        let mut params: Vec<(&str, &str)> = vec![
-            ("exclude_archived", if exclude_archived { "true" } else { "false" }),
-        ];
+        let mut params: Vec<(&str, &str)> = vec![(
+            "exclude_archived",
+            if exclude_archived { "true" } else { "false" },
+        )];
         if let Some(n) = limit {
             limit_str = n.to_string();
             params.push(("limit", &limit_str));
@@ -81,11 +85,7 @@ impl SlackClient {
     }
 
     /// Open a DM with a user via `conversations.open`, then send the message.
-    pub(crate) async fn send_dm(
-        &self,
-        user_id: &str,
-        text: &str,
-    ) -> Result<Value, SlackError> {
+    pub(crate) async fn send_dm(&self, user_id: &str, text: &str) -> Result<Value, SlackError> {
         // Step 1: open (or retrieve) the DM channel.
         let open_url = format!("{}/conversations.open", self.api_base_url);
         let open_body = serde_json::json!({ "users": user_id });
@@ -94,7 +94,9 @@ impl SlackClient {
             .get("channel")
             .and_then(|c| c.get("id"))
             .and_then(|id| id.as_str())
-            .ok_or_else(|| SlackError::Deserialize("conversations.open: missing channel.id".into()))?
+            .ok_or_else(|| {
+                SlackError::Deserialize("conversations.open: missing channel.id".into())
+            })?
             .to_owned();
 
         // Step 2: post the message.
@@ -167,8 +169,8 @@ impl SlackClient {
             .await
             .map_err(|e| SlackError::Deserialize(e.to_string()))?;
 
-        let value: Value = serde_json::from_str(&text)
-            .map_err(|e| SlackError::Deserialize(e.to_string()))?;
+        let value: Value =
+            serde_json::from_str(&text).map_err(|e| SlackError::Deserialize(e.to_string()))?;
 
         // Slack always returns HTTP 200; errors live in the JSON envelope.
         match value.get("ok").and_then(|v| v.as_bool()) {

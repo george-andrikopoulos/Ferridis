@@ -84,13 +84,10 @@ impl McpClient {
 
     async fn recv(&mut self) -> Value {
         let mut line = String::new();
-        let read = tokio::time::timeout(
-            Duration::from_secs(10),
-            self.stdout.read_line(&mut line),
-        )
-        .await
-        .expect("response timeout")
-        .expect("read response");
+        let read = tokio::time::timeout(Duration::from_secs(10), self.stdout.read_line(&mut line))
+            .await
+            .expect("response timeout")
+            .expect("read response");
         assert!(read > 0, "server closed stdout");
         serde_json::from_str(&line).expect("response is JSON")
     }
@@ -122,7 +119,8 @@ async fn full_mcp_handshake_and_read_file() {
             "capabilities": {},
             "clientInfo": {"name": "test-harness", "version": "0.1.0"}
         }
-    })).await;
+    }))
+    .await;
     let init = mcp.recv().await;
     assert_eq!(init["id"], 1);
     assert_eq!(init["result"]["protocolVersion"], "2024-11-05");
@@ -133,14 +131,19 @@ async fn full_mcp_handshake_and_read_file() {
         "jsonrpc": "2.0",
         "method": "notifications/initialized",
         "params": {}
-    })).await;
+    }))
+    .await;
 
     // 3. tools/list
-    mcp.send(json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})).await;
+    mcp.send(json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}))
+        .await;
     let listed = mcp.recv().await;
     let tools = listed["result"]["tools"].as_array().expect("tools array");
     let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
-    assert!(names.contains(&"ferridis_ferridis_fs_v1_read_file"), "missing: {names:?}");
+    assert!(
+        names.contains(&"ferridis_ferridis_fs_v1_read_file"),
+        "missing: {names:?}"
+    );
     assert!(names.contains(&"ferridis_ferridis_fs_v1_write_file"));
     assert!(names.contains(&"ferridis_ferridis_fs_v1_list_dir"));
 
@@ -153,7 +156,8 @@ async fn full_mcp_handshake_and_read_file() {
             "name": "ferridis_ferridis_fs_v1_read_file",
             "arguments": {"path": "hello.txt"}
         }
-    })).await;
+    }))
+    .await;
     let called = mcp.recv().await;
     assert_eq!(called["id"], 3);
     let content = called["result"]["content"].as_array().unwrap();
@@ -180,12 +184,14 @@ async fn tools_call_with_unknown_tool_returns_method_not_found() {
     let _ = mcp.recv().await;
     mcp.send(json!({
         "jsonrpc": "2.0", "method": "notifications/initialized", "params": {}
-    })).await;
+    }))
+    .await;
 
     mcp.send(json!({
         "jsonrpc": "2.0", "id": 2, "method": "tools/call",
         "params": {"name": "nonexistent_tool", "arguments": {}}
-    })).await;
+    }))
+    .await;
     let resp = mcp.recv().await;
     assert_eq!(resp["error"]["code"], -32601);
     mcp.shutdown().await;
@@ -208,7 +214,8 @@ async fn dispatch_failure_surfaces_as_tool_call_iserror_true() {
         "params": {"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"t","version":"0"}}
     })).await;
     let _ = mcp.recv().await;
-    mcp.send(json!({"jsonrpc":"2.0","method":"notifications/initialized","params":{}})).await;
+    mcp.send(json!({"jsonrpc":"2.0","method":"notifications/initialized","params":{}}))
+        .await;
 
     mcp.send(json!({
         "jsonrpc":"2.0", "id": 2, "method":"tools/call",
@@ -229,7 +236,8 @@ async fn rejects_wrong_jsonrpc_version() {
     let cfg_path = write_adapters_config(&work, addr);
 
     let mut mcp = McpClient::spawn(&cfg_path).await;
-    mcp.send(json!({"jsonrpc":"1.0","id":1,"method":"initialize","params":{}})).await;
+    mcp.send(json!({"jsonrpc":"1.0","id":1,"method":"initialize","params":{}}))
+        .await;
     let resp = mcp.recv().await;
     assert_eq!(resp["error"]["code"], -32600);
     mcp.shutdown().await;
@@ -287,11 +295,13 @@ async fn partial_failure_keeps_successful_adapters_alive() {
     let init = mcp.recv().await;
     assert_eq!(init["result"]["serverInfo"]["name"], "ferridis");
 
-    mcp.send(json!({"jsonrpc":"2.0","method":"notifications/initialized","params":{}})).await;
+    mcp.send(json!({"jsonrpc":"2.0","method":"notifications/initialized","params":{}}))
+        .await;
 
     // tools/list must reflect the working subset only — fs intents
     // present, broken adapter's intents absent.
-    mcp.send(json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}})).await;
+    mcp.send(json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}))
+        .await;
     let listed = mcp.recv().await;
     let names: Vec<&str> = listed["result"]["tools"]
         .as_array()
@@ -344,8 +354,10 @@ async fn partial_failure_with_all_adapters_failing_still_serves() {
     let init = mcp.recv().await;
     assert_eq!(init["result"]["serverInfo"]["name"], "ferridis");
 
-    mcp.send(json!({"jsonrpc":"2.0","method":"notifications/initialized","params":{}})).await;
-    mcp.send(json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}})).await;
+    mcp.send(json!({"jsonrpc":"2.0","method":"notifications/initialized","params":{}}))
+        .await;
+    mcp.send(json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}))
+        .await;
     let listed = mcp.recv().await;
     assert_eq!(
         listed["result"]["tools"].as_array().unwrap().len(),
@@ -459,9 +471,11 @@ async fn tools_call_handles_stream_kind_intents() {
         "params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"t","version":"0"}}
     })).await;
     let _ = mcp.recv().await;
-    mcp.send(json!({"jsonrpc":"2.0","method":"notifications/initialized","params":{}})).await;
+    mcp.send(json!({"jsonrpc":"2.0","method":"notifications/initialized","params":{}}))
+        .await;
 
-    mcp.send(json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}})).await;
+    mcp.send(json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}))
+        .await;
     let listed = mcp.recv().await;
     let names: Vec<&str> = listed["result"]["tools"]
         .as_array()
@@ -477,7 +491,8 @@ async fn tools_call_handles_stream_kind_intents() {
     mcp.send(json!({
         "jsonrpc":"2.0","id":3,"method":"tools/call",
         "params":{"name":"ferridis_test_streamy_v1_say_hi","arguments":{}}
-    })).await;
+    }))
+    .await;
     let resp = mcp.recv().await;
     // Success — not isError.
     assert!(
@@ -488,9 +503,11 @@ async fn tools_call_handles_stream_kind_intents() {
     let text = resp["result"]["content"][0]["text"]
         .as_str()
         .expect("content text");
-    let parsed: serde_json::Value =
-        serde_json::from_str(text).expect("content text is valid JSON");
-    assert_eq!(parsed["result"], "PONG", "primary text must be the result.result");
+    let parsed: serde_json::Value = serde_json::from_str(text).expect("content text is valid JSON");
+    assert_eq!(
+        parsed["result"], "PONG",
+        "primary text must be the result.result"
+    );
     let chunks = parsed["chunks"].as_array().expect("chunks array");
     assert_eq!(chunks.len(), 3, "all chunks must be preserved");
     assert_eq!(chunks[0]["type"], "system");
@@ -507,7 +524,8 @@ async fn ping_responds_with_empty_object() {
     let cfg_path = write_adapters_config(&work, addr);
 
     let mut mcp = McpClient::spawn(&cfg_path).await;
-    mcp.send(json!({"jsonrpc":"2.0","id":1,"method":"ping","params":{}})).await;
+    mcp.send(json!({"jsonrpc":"2.0","id":1,"method":"ping","params":{}}))
+        .await;
     let resp = mcp.recv().await;
     assert_eq!(resp["id"], 1);
     assert_eq!(resp["result"], serde_json::json!({}));

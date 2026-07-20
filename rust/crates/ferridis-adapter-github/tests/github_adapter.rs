@@ -10,7 +10,7 @@ use base64::Engine as _;
 use ferridis_adapter_github::{GitHubCapability, GitHubToken};
 use ferridis_adapter_sdk::AdapterServer;
 use reqwest::StatusCode;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tokio::net::TcpListener;
 use wiremock::matchers::{method, path, path_regex, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};

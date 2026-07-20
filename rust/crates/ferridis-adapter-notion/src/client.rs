@@ -19,10 +19,17 @@ pub(crate) struct NotionClient {
 impl NotionClient {
     pub(crate) fn new(token: IntegrationToken) -> Self {
         let http = reqwest::Client::builder()
-            .user_agent(concat!("ferridis-adapter-notion/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!(
+                "ferridis-adapter-notion/",
+                env!("CARGO_PKG_VERSION")
+            ))
             .build()
             .expect("build reqwest client"); // allow:unwrap static config — never fails
-        Self { http, token, api_base_url: DEFAULT_API_BASE.to_string() }
+        Self {
+            http,
+            token,
+            api_base_url: DEFAULT_API_BASE.to_string(),
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -153,6 +160,10 @@ impl NotionClient {
             .and_then(|v| v.as_str())
             .unwrap_or(&text) // allow:unwrap using unwrap_or
             .to_owned();
-        Err(NotionError::ApiError { status: status.as_u16(), code, message })
+        Err(NotionError::ApiError {
+            status: status.as_u16(),
+            code,
+            message,
+        })
     }
 }

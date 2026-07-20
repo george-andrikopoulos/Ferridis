@@ -175,10 +175,13 @@ pub async fn subscribe_with_cursor(
         req = req.header("Last-Event-ID", c.as_str());
     }
 
-    let response = req.send().await.map_err(|source| ProtocolError::Transport {
-        url: url.clone(), // clone: url is borrowed, ProtocolError needs owned Url
-        source,
-    })?;
+    let response = req
+        .send()
+        .await
+        .map_err(|source| ProtocolError::Transport {
+            url: url.clone(), // clone: url is borrowed, ProtocolError needs owned Url
+            source,
+        })?;
 
     let status = response.status();
     if !status.is_success() {
@@ -390,9 +393,7 @@ mod tests {
     use bytes::Bytes;
     use futures_util::{StreamExt, stream};
 
-    fn bytes_stream(
-        chunks: Vec<&'static str>,
-    ) -> impl Stream<Item = Result<Bytes, ProtocolError>> {
+    fn bytes_stream(chunks: Vec<&'static str>) -> impl Stream<Item = Result<Bytes, ProtocolError>> {
         stream::iter(
             chunks
                 .into_iter()
@@ -428,16 +429,16 @@ mod tests {
         let s = bytes_stream(vec!["data: line1\ndata: line2\ndata: line3\n\n"]);
         let mut out = Box::pin(parse_sse_stream(s));
         let ev = out.next().await.unwrap().unwrap();
-        assert_eq!(ev.data, serde_json::Value::String("line1\nline2\nline3".to_string()));
+        assert_eq!(
+            ev.data,
+            serde_json::Value::String("line1\nline2\nline3".to_string())
+        );
     }
 
     #[tokio::test]
     async fn drops_event_blocks_with_no_data_field() {
         // Per the SSE spec.
-        let s = bytes_stream(vec![
-            "event: heartbeat\nid: 1\n\n",
-            "data: real\n\n",
-        ]);
+        let s = bytes_stream(vec!["event: heartbeat\nid: 1\n\n", "data: real\n\n"]);
         let mut out = Box::pin(parse_sse_stream(s));
         let ev = out.next().await.unwrap().unwrap();
         assert_eq!(ev.data, serde_json::Value::String("real".to_string()));
@@ -455,12 +456,7 @@ mod tests {
     async fn handles_chunk_boundaries_mid_event() {
         // The byte stream splits the event across chunks; the parser
         // must buffer correctly.
-        let s = bytes_stream(vec![
-            "event: thi",
-            "ng\ndata: ",
-            "{\"k\":\"",
-            "v\"}\n\n",
-        ]);
+        let s = bytes_stream(vec!["event: thi", "ng\ndata: ", "{\"k\":\"", "v\"}\n\n"]);
         let mut out = Box::pin(parse_sse_stream(s));
         let ev = out.next().await.unwrap().unwrap();
         assert_eq!(ev.name, "thing");

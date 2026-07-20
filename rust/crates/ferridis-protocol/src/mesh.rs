@@ -67,7 +67,10 @@ use url::Url;
 
 use crate::client::Client;
 use crate::error::ProtocolError;
-use crate::signing::{CosignBundle, SigningError, TrustRoot, verify_signed_manifest, verify_signed_manifest_with_trust_root};
+use crate::signing::{
+    CosignBundle, SigningError, TrustRoot, verify_signed_manifest,
+    verify_signed_manifest_with_trust_root,
+};
 
 /// Default TTL for the mesh client's per-capability cache. Long
 /// enough that a cold start that fetches a dozen capabilities does
@@ -225,10 +228,7 @@ impl MeshClient {
     /// mesh. Does **not** verify the signature; callers must verify
     /// before parsing the manifest body. Use
     /// [`Self::fetch_and_verify`] for the combined flow.
-    pub async fn fetch(
-        &self,
-        capability: &CapabilityRef,
-    ) -> Result<MeshArtifact, ProtocolError> {
+    pub async fn fetch(&self, capability: &CapabilityRef) -> Result<MeshArtifact, ProtocolError> {
         let (manifest_bytes, _, bundle) = self.fetch_raw(capability).await?;
         Ok(MeshArtifact {
             manifest_bytes,
@@ -482,7 +482,9 @@ impl FederatedMesh {
         for mesh in &self.meshes {
             match mesh.fetch_and_verify(capability).await {
                 Ok(artifact) => return Ok(artifact),
-                Err(ProtocolError::BadStatus { status: 404, url, .. }) => {
+                Err(ProtocolError::BadStatus {
+                    status: 404, url, ..
+                }) => {
                     tracing::debug!(
                         capability = %capability,
                         mesh_root = %mesh.mesh_root(),

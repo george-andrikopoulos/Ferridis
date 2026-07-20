@@ -28,7 +28,10 @@ impl StreamChunk {
 
     /// Construct a chunk with [`BackpressureSignal::Continue`] — the common case.
     pub fn data_only(data: serde_json::Value) -> Self {
-        Self { data, signal: BackpressureSignal::Continue }
+        Self {
+            data,
+            signal: BackpressureSignal::Continue,
+        }
     }
 
     /// The chunk payload.

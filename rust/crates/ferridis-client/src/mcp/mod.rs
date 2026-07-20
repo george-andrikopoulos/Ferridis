@@ -124,8 +124,9 @@ pub fn project_tools_to_manifest(
     let manifest_str = serde_json::to_string(&manifest_json).map_err(crate::ClientError::from)?;
     let manifest = Manifest::parse(&manifest_str)?;
 
-    let capability_ref =
-        CapabilityRef::parse(&format!("ferridis://wallet/{id_namespace}/{server_slug}@{version}"))?;
+    let capability_ref = CapabilityRef::parse(&format!(
+        "ferridis://wallet/{id_namespace}/{server_slug}@{version}"
+    ))?;
 
     Ok(ProjectedManifest {
         manifest,
@@ -205,7 +206,10 @@ mod tests {
             mcp_tool_name_to_intent_verb("system.boot-performance"),
             "system-boot-performance"
         );
-        assert_eq!(mcp_tool_name_to_intent_verb("journal.query"), "journal-query");
+        assert_eq!(
+            mcp_tool_name_to_intent_verb("journal.query"),
+            "journal-query"
+        );
     }
 
     #[test]
@@ -250,7 +254,11 @@ mod tests {
         ];
         let err = project_tools_to_manifest("x", "mcp", "v1", &tools).unwrap_err();
         match err {
-            crate::ClientError::McpToolNameCollision { first, second, verb } => {
+            crate::ClientError::McpToolNameCollision {
+                first,
+                second,
+                verb,
+            } => {
                 assert_eq!(first, "services.list-units");
                 assert_eq!(second, "services_list_units");
                 assert_eq!(verb.as_str(), "services-list-units");

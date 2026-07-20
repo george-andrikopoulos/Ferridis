@@ -72,7 +72,12 @@ impl MemoryStore {
 
 impl WalletStore for MemoryStore {
     fn get(&self, account: &str) -> Result<Option<String>, ClientError> {
-        Ok(self.inner.lock().expect("memorystore mutex poisoned").get(account).cloned())
+        Ok(self
+            .inner
+            .lock()
+            .expect("memorystore mutex poisoned")
+            .get(account)
+            .cloned())
     }
 
     fn set(&self, account: &str, value: &str) -> Result<(), ClientError> {

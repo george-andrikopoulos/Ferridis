@@ -374,9 +374,10 @@ impl OAuthServer {
         let mut state = self.state.lock().expect("oauth mutex");
 
         // Atomically remove the code (single-use).
-        let entry = state.codes.remove(&req.code).ok_or_else(|| {
-            OAuthError::InvalidGrant("code not found or already redeemed".into())
-        })?;
+        let entry = state
+            .codes
+            .remove(&req.code)
+            .ok_or_else(|| OAuthError::InvalidGrant("code not found or already redeemed".into()))?;
 
         if entry.issued_at.elapsed() > AUTH_CODE_TTL {
             return Err(OAuthError::InvalidGrant("code expired".into()));
@@ -492,8 +493,8 @@ mod tests {
     fn issue_pkce() -> (String, String) {
         // Verifier = 64-byte random base64url; challenge = base64url(SHA256(verifier)).
         let verifier = random_token(48); // 48 bytes → 64 base64url chars
-        let challenge =
-            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
+        let challenge = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .encode(Sha256::digest(verifier.as_bytes()));
         (verifier, challenge)
     }
 

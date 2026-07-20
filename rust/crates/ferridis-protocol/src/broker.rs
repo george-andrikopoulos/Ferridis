@@ -130,10 +130,7 @@ impl Broker {
         // with explicit `capability_url` may surface it here in future.
         let capability_ref = capability_ref_from_manifest(manifest)?;
 
-        let mut map = self
-            .pending
-            .lock()
-            .expect("broker pending mutex poisoned");
+        let mut map = self.pending.lock().expect("broker pending mutex poisoned");
         map.insert(
             state_token.clone(),
             PendingState {
@@ -168,11 +165,9 @@ impl Broker {
     ) -> Result<Connection<Authorized>, ProtocolError> {
         let state_token = pending.state_token().to_string();
         let state = {
-            let mut map = self
-                .pending
-                .lock()
-                .expect("broker pending mutex poisoned");
-            map.remove(&state_token).ok_or(ProtocolError::UnknownState)?
+            let mut map = self.pending.lock().expect("broker pending mutex poisoned");
+            map.remove(&state_token)
+                .ok_or(ProtocolError::UnknownState)?
         };
 
         let tokens = exchange_code(

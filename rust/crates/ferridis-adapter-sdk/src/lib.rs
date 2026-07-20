@@ -46,5 +46,5 @@ pub use capability::{Capability, IntentStream, SchemaSource, StreamItem};
 pub use dispatch::DispatchError;
 pub use events::{Event, EventPublisher, WebhookPublisher};
 pub use server::AdapterServer;
-pub use validation::{validate_body, ValidationError, ValidationOutcome};
+pub use validation::{ValidationError, ValidationOutcome, validate_body};
 pub use ws_handler::{WsConnId, WsHandler, WsMessage};

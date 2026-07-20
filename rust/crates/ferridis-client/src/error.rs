@@ -74,7 +74,9 @@ pub enum ClientError {
     /// file's contents into the OS keychain (one-time, manual) and
     /// then remove the file. The error carries the offending path so
     /// the operator knows what to clean up.
-    #[error("legacy plaintext wallet at {path}: v0.2 requires keychain-only storage; migrate and delete the file")]
+    #[error(
+        "legacy plaintext wallet at {path}: v0.2 requires keychain-only storage; migrate and delete the file"
+    )]
     LegacyPlaintextWalletDetected {
         /// The on-disk path of the legacy file.
         path: String,
@@ -129,7 +131,9 @@ pub enum ClientError {
     /// on an intent whose manifest declares (or defaults to)
     /// `kind: "request"`. Single-shot intents go through plain
     /// [`Client::dispatch`](crate::Client::dispatch).
-    #[error("intent `{intent}` on `{capability}` is request-kind; use dispatch (not dispatch_streaming)")]
+    #[error(
+        "intent `{intent}` on `{capability}` is request-kind; use dispatch (not dispatch_streaming)"
+    )]
     IntentNotStreaming {
         /// The capability the dispatch was targeting.
         capability: CapabilityRef,
@@ -142,7 +146,9 @@ pub enum ClientError {
     /// `event_channels` field. v0.3 enforces channel declarations
     /// where present; manifests that declare no channels at all
     /// fall through to a permissive legacy path.
-    #[error("capability `{capability}` does not declare event channel `{channel}` (declared: {declared:?})")]
+    #[error(
+        "capability `{capability}` does not declare event channel `{channel}` (declared: {declared:?})"
+    )]
     EventChannelNotDeclared {
         /// The capability the caller tried to subscribe against.
         capability: CapabilityRef,

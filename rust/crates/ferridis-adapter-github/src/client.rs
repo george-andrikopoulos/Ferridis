@@ -95,9 +95,7 @@ impl GitHubClient {
         path: &str,
         git_ref: Option<&str>,
     ) -> Result<Value, GitHubError> {
-        let query = git_ref
-            .map(|r| format!("?ref={}", r))
-            .unwrap_or_default();
+        let query = git_ref.map(|r| format!("?ref={}", r)).unwrap_or_default();
         let api_path = format!(
             "/repos/{}/{}/contents/{}{}",
             owner.as_str(),
@@ -118,8 +116,7 @@ impl GitHubClient {
             .decode(encoded)
             .map_err(|e| GitHubError::InvalidBase64(e.to_string()))?;
 
-        let text =
-            String::from_utf8(bytes).map_err(|e| GitHubError::NotUtf8(e.to_string()))?;
+        let text = String::from_utf8(bytes).map_err(|e| GitHubError::NotUtf8(e.to_string()))?;
 
         Ok(serde_json::json!({
             "path":    raw.get("path").and_then(|v| v.as_str()).unwrap_or(path),
@@ -230,10 +227,7 @@ impl GitHubClient {
         self.handle_response(response).await
     }
 
-    async fn handle_response(
-        &self,
-        response: reqwest::Response,
-    ) -> Result<Value, GitHubError> {
+    async fn handle_response(&self, response: reqwest::Response) -> Result<Value, GitHubError> {
         let status = response.status();
 
         if status.as_u16() == 429 {

@@ -36,7 +36,10 @@ pub(crate) struct GoogleCalendarClient {
 impl GoogleCalendarClient {
     pub(crate) fn new(token: AccessToken) -> Self {
         let http = reqwest::Client::builder()
-            .user_agent(concat!("ferridis-adapter-google-calendar/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!(
+                "ferridis-adapter-google-calendar/",
+                env!("CARGO_PKG_VERSION")
+            ))
             .build()
             .expect("build reqwest client"); // allow:unwrap static config — never fails
         Self {
@@ -83,8 +86,10 @@ impl GoogleCalendarClient {
         calendar_id: &str,
         event_id: &str,
     ) -> Result<Value, GoogleCalendarError> {
-        let url =
-            format!("{}/calendars/{}/events/{}", self.api_base_url, calendar_id, event_id);
+        let url = format!(
+            "{}/calendars/{}/events/{}",
+            self.api_base_url, calendar_id, event_id
+        );
         self.get_json_with_refresh(&url).await
     }
 
@@ -105,8 +110,10 @@ impl GoogleCalendarClient {
         event_id: &str,
         body: &Value,
     ) -> Result<Value, GoogleCalendarError> {
-        let url =
-            format!("{}/calendars/{}/events/{}", self.api_base_url, calendar_id, event_id);
+        let url = format!(
+            "{}/calendars/{}/events/{}",
+            self.api_base_url, calendar_id, event_id
+        );
         self.put_json_with_refresh(&url, body).await
     }
 
@@ -116,8 +123,10 @@ impl GoogleCalendarClient {
         calendar_id: &str,
         event_id: &str,
     ) -> Result<(), GoogleCalendarError> {
-        let url =
-            format!("{}/calendars/{}/events/{}", self.api_base_url, calendar_id, event_id);
+        let url = format!(
+            "{}/calendars/{}/events/{}",
+            self.api_base_url, calendar_id, event_id
+        );
         self.delete_with_refresh(&url).await
     }
 
@@ -302,10 +311,7 @@ impl GoogleCalendarClient {
     // Response parsing
     // -----------------------------------------------------------------------
 
-    async fn handle_response(
-        &self,
-        resp: reqwest::Response,
-    ) -> Result<Value, GoogleCalendarError> {
+    async fn handle_response(&self, resp: reqwest::Response) -> Result<Value, GoogleCalendarError> {
         let status = resp.status();
 
         if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
@@ -332,11 +338,13 @@ impl GoogleCalendarClient {
                     .unwrap_or(text), // allow:unwrap using unwrap_or
                 Err(_) => text,
             };
-            return Err(GoogleCalendarError::ApiError { status: status.as_u16(), message });
+            return Err(GoogleCalendarError::ApiError {
+                status: status.as_u16(),
+                message,
+            });
         }
 
-        serde_json::from_str(&text)
-            .map_err(|e| GoogleCalendarError::Deserialize(e.to_string()))
+        serde_json::from_str(&text).map_err(|e| GoogleCalendarError::Deserialize(e.to_string()))
     }
 
     async fn handle_delete_response(
@@ -372,6 +380,9 @@ impl GoogleCalendarClient {
                 .unwrap_or(text), // allow:unwrap using unwrap_or
             Err(_) => text,
         };
-        Err(GoogleCalendarError::ApiError { status: status.as_u16(), message })
+        Err(GoogleCalendarError::ApiError {
+            status: status.as_u16(),
+            message,
+        })
     }
 }

@@ -62,12 +62,14 @@ pub mod ws;
 pub mod backpressure;
 pub mod discovery;
 pub use backpressure::{BackpressureSignal, StreamChunk};
-pub use discovery::{DiscoveredService, MdnsScanner, ServiceKind};
 pub use broker::Broker;
 pub use call::{CallRequest, CallResponse, call, call_anonymous};
 pub use client::Client;
+pub use discovery::{DiscoveredService, MdnsScanner, ServiceKind};
 pub use error::ProtocolError;
-pub use events::{ReconnectCursor, ServerEvent, parse_sse_stream, subscribe, subscribe_with_cursor};
+pub use events::{
+    ReconnectCursor, ServerEvent, parse_sse_stream, subscribe, subscribe_with_cursor,
+};
 pub use manifest::fetch_manifest;
 pub use mesh::{FederatedMesh, MeshArtifact, MeshClient, MeshIndex, MeshIndexEntry};
 pub use oauth::{AuthorizationUrl, PkceChallenge, PkceVerifier, TokenResponse};

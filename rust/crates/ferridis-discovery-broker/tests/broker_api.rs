@@ -7,7 +7,11 @@ use std::time::Duration;
 async fn register_and_list_service() {
     let store = ServiceStore::new();
     store
-        .register(RegisterRequest::new("my-adapter", "mcp", "http://192.168.1.42:7821/mcp"))
+        .register(RegisterRequest::new(
+            "my-adapter",
+            "mcp",
+            "http://192.168.1.42:7821/mcp",
+        ))
         .await
         .unwrap();
     let services = store.list().await;
@@ -20,7 +24,11 @@ async fn subscribe_receives_event_on_register() {
     let store = ServiceStore::new();
     let mut rx = store.subscribe();
     store
-        .register(RegisterRequest::new("ev-adapter", "ferridis", "http://localhost:7824/"))
+        .register(RegisterRequest::new(
+            "ev-adapter",
+            "ferridis",
+            "http://localhost:7824/",
+        ))
         .await
         .unwrap();
     let svc = rx.recv().await.unwrap();
@@ -33,8 +41,7 @@ async fn subscribe_receives_event_on_register() {
 /// Store 2 is created from the same path, calls load_state() → finds the service.
 #[tokio::test]
 async fn state_file_persists_registrations_across_restarts() {
-    let state_path =
-        std::env::temp_dir().join("ferridis-discovery-state-persist-test.json");
+    let state_path = std::env::temp_dir().join("ferridis-discovery-state-persist-test.json");
     let _ = std::fs::remove_file(&state_path); // clean slate
 
     // "Process 1": register a persistent service — should atomically write the state file.
@@ -47,7 +54,10 @@ async fn state_file_persists_registrations_across_restarts() {
             )
             .await
             .unwrap(); // allow:unwrap test-only
-        assert!(state_path.exists(), "state file should be written after register");
+        assert!(
+            state_path.exists(),
+            "state file should be written after register"
+        );
     }
 
     // "Process 2": new store from same path, load state before serving.
@@ -90,7 +100,9 @@ async fn post_register_and_get_services() {
 async fn persistent_registration_survives_ttl() {
     let store = ServiceStore::new_with_ttl(Duration::ZERO);
     store
-        .register(RegisterRequest::new("pinned-svc", "mcp", "http://localhost:9010/mcp").persistent(true))
+        .register(
+            RegisterRequest::new("pinned-svc", "mcp", "http://localhost:9010/mcp").persistent(true),
+        )
         .await
         .unwrap();
     let services = store.list().await;
@@ -104,7 +116,11 @@ async fn persistent_registration_survives_ttl() {
 async fn ephemeral_registration_expires_after_ttl() {
     let store = ServiceStore::new_with_ttl(Duration::ZERO);
     store
-        .register(RegisterRequest::new("ephemeral-svc", "mcp", "http://localhost:9011/mcp"))
+        .register(RegisterRequest::new(
+            "ephemeral-svc",
+            "mcp",
+            "http://localhost:9011/mcp",
+        ))
         .await
         .unwrap();
     let services = store.list().await;
@@ -134,7 +150,10 @@ async fn state_file_entries_are_always_pinned() {
         assert_eq!(loaded, 1);
         let services = store.list().await;
         assert_eq!(services.len(), 1, "loaded entry should survive TTL=0");
-        assert!(services[0].persistent(), "loaded entry should be marked persistent");
+        assert!(
+            services[0].persistent(),
+            "loaded entry should be marked persistent"
+        );
     }
 
     let _ = std::fs::remove_file(&state_path);
@@ -206,8 +225,7 @@ async fn http_list_includes_persistent_field() {
     let store = ServiceStore::new();
     store
         .register(
-            RegisterRequest::new("listed-svc", "mcp", "http://localhost:9015/mcp")
-                .persistent(true),
+            RegisterRequest::new("listed-svc", "mcp", "http://localhost:9015/mcp").persistent(true),
         )
         .await
         .unwrap();
@@ -216,6 +234,9 @@ async fn http_list_includes_persistent_field() {
 
     let list: serde_json::Value = server.get("/discovery/services").await.json();
     let entry = &list.as_array().unwrap()[0];
-    assert!(entry.get("persistent").is_some(), "response must include 'persistent' field");
+    assert!(
+        entry.get("persistent").is_some(),
+        "response must include 'persistent' field"
+    );
     assert_eq!(entry["persistent"], true);
 }

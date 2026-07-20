@@ -11,7 +11,9 @@ use ferridis_core::{IntentVerb, Manifest};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-use crate::input::{AllowedCwd, AllowedRoots, InputError, Model, ModelAllowList, Prompt, SessionId};
+use crate::input::{
+    AllowedCwd, AllowedRoots, InputError, Model, ModelAllowList, Prompt, SessionId,
+};
 
 /// The manifest id this capability publishes under.
 pub const CAPABILITY_ID: &str = "personal.claude-cli.v1";
@@ -246,8 +248,9 @@ impl Capability for ClaudeCliCapability {
     ) -> Result<IntentStream, DispatchError> {
         match intent.as_str() {
             "submit-prompt" => {
-                let args: SubmitPromptArgs = serde_json::from_value(body)
-                    .map_err(|e| DispatchError::InvalidRequest(format!("submit-prompt args: {e}")))?;
+                let args: SubmitPromptArgs = serde_json::from_value(body).map_err(|e| {
+                    DispatchError::InvalidRequest(format!("submit-prompt args: {e}"))
+                })?;
                 self.spawn_claude(SpawnArgs {
                     resume_id: None,
                     new_session_id: args.session_id.as_deref(),
@@ -258,8 +261,9 @@ impl Capability for ClaudeCliCapability {
                 .await
             }
             "resume-session" => {
-                let args: ResumeSessionArgs = serde_json::from_value(body)
-                    .map_err(|e| DispatchError::InvalidRequest(format!("resume-session args: {e}")))?;
+                let args: ResumeSessionArgs = serde_json::from_value(body).map_err(|e| {
+                    DispatchError::InvalidRequest(format!("resume-session args: {e}"))
+                })?;
                 self.spawn_claude(SpawnArgs {
                     resume_id: Some(&args.session_id),
                     new_session_id: None,
@@ -291,10 +295,7 @@ impl ClaudeCliCapability {
     /// stdout line. The child is owned by the stream — when the
     /// caller drops the stream the child's pipes close and the
     /// process winds down on its next read.
-    async fn spawn_claude(
-        &self,
-        args: SpawnArgs<'_>,
-    ) -> Result<IntentStream, DispatchError> {
+    async fn spawn_claude(&self, args: SpawnArgs<'_>) -> Result<IntentStream, DispatchError> {
         // Validate everything before the spawn.
         let prompt = Prompt::parse(args.prompt).map_err(from_input)?;
 
@@ -371,9 +372,10 @@ impl ClaudeCliCapability {
             ))
         })?;
 
-        let stdout = child.stdout.take().ok_or_else(|| {
-            DispatchError::Internal("claude child has no stdout pipe".into())
-        })?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| DispatchError::Internal("claude child has no stdout pipe".into()))?;
         let mut stderr_pipe = child.stderr.take();
 
         let stream = async_stream::try_stream! {

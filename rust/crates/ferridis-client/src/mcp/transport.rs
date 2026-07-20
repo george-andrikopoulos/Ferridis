@@ -88,15 +88,17 @@ impl StdioTransport {
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
-        let mut child = cmd.spawn().map_err(|e| {
-            ClientError::WalletIo(format!("spawn MCP server `{command}`: {e}"))
-        })?;
-        let stdin = child.stdin.take().ok_or_else(|| {
-            ClientError::WalletIo("MCP server child has no stdin".into())
-        })?;
-        let stdout = child.stdout.take().ok_or_else(|| {
-            ClientError::WalletIo("MCP server child has no stdout".into())
-        })?;
+        let mut child = cmd
+            .spawn()
+            .map_err(|e| ClientError::WalletIo(format!("spawn MCP server `{command}`: {e}")))?;
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| ClientError::WalletIo("MCP server child has no stdin".into()))?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| ClientError::WalletIo("MCP server child has no stdout".into()))?;
         let stderr = child.stderr.take();
 
         let pending: Arc<Mutex<Pending>> = Arc::new(Mutex::new(Pending::default()));
@@ -299,9 +301,7 @@ impl McpTransport for SseTransport {
                     "POST returned 404 — upstream forgot sessionId".to_string(),
                 ));
             }
-            return Err(ClientError::WalletIo(format!(
-                "MCP POST returned {status}"
-            )));
+            return Err(ClientError::WalletIo(format!("MCP POST returned {status}")));
         }
         // Response arrives via SSE; await the oneshot.
         match tokio::time::timeout(Duration::from_secs(30), rx).await {
@@ -412,8 +412,7 @@ async fn spawn_sse_reader(
             buf.extend_from_slice(&bytes);
             while let Some(pos) = find_event_boundary(&buf) {
                 let event_bytes = buf.drain(..pos.end).collect::<Vec<u8>>();
-                let event_text =
-                    String::from_utf8_lossy(&event_bytes[..pos.end - 2]).into_owned();
+                let event_text = String::from_utf8_lossy(&event_bytes[..pos.end - 2]).into_owned();
                 let (event_name, data) = parse_sse_event(&event_text);
                 handle_event_shared(
                     &event_name,

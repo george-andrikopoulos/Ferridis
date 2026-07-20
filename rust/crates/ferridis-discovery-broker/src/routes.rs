@@ -2,19 +2,19 @@
 
 use crate::store::{BrokerError, RegisterRequest, ServiceStore};
 use axum::{
+    Json, Router,
     extract::{Path, State},
     http::StatusCode,
     response::{
-        sse::{Event, KeepAlive, Sse},
         IntoResponse, Response,
+        sse::{Event, KeepAlive, Sse},
     },
     routing::{delete, get, post},
-    Json, Router,
 };
 use ferridis_protocol::discovery::ServiceKind;
 use futures_core::Stream;
 use serde_json::json;
-use tokio_stream::{wrappers::BroadcastStream, StreamExt as _};
+use tokio_stream::{StreamExt as _, wrappers::BroadcastStream};
 
 /// Build the axum router with all discovery routes.
 pub fn make_router(store: ServiceStore) -> Router {
@@ -26,10 +26,7 @@ pub fn make_router(store: ServiceStore) -> Router {
         .with_state(store)
 }
 
-async fn register(
-    State(store): State<ServiceStore>,
-    Json(req): Json<RegisterRequest>,
-) -> Response {
+async fn register(State(store): State<ServiceStore>, Json(req): Json<RegisterRequest>) -> Response {
     match store.register(req).await {
         Ok(()) => (StatusCode::OK, Json(json!({"ok": true}))).into_response(),
         Err(BrokerError::UnknownKind(k)) => (
@@ -44,12 +41,18 @@ async fn register(
             .into_response(),
         Err(BrokerError::Io(e)) => {
             tracing::error!(error = %e, "state file I/O error during register");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "state persistence failed"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "state persistence failed"})),
+            )
                 .into_response()
         }
         Err(BrokerError::Json(e)) => {
             tracing::error!(error = %e, "state file JSON error during register");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "state persistence failed"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "state persistence failed"})),
+            )
                 .into_response()
         }
     }
@@ -72,16 +75,16 @@ async fn list_services(State(store): State<ServiceStore>) -> Response {
     Json(services).into_response()
 }
 
-async fn delete_service(
-    State(store): State<ServiceStore>,
-    Path(name): Path<String>,
-) -> Response {
+async fn delete_service(State(store): State<ServiceStore>, Path(name): Path<String>) -> Response {
     match store.remove(&name).await {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
         Ok(false) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
             tracing::error!(error = %e, name = %name, "state file error during delete");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "state persistence failed"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "state persistence failed"})),
+            )
                 .into_response()
         }
     }

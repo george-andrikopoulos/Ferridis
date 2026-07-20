@@ -103,8 +103,7 @@ impl Client {
         base_url: Url,
     ) -> Result<Manifest, ClientError> {
         let manifest = fetch_manifest(&self.http, &manifest_url).await?;
-        let record =
-            CapabilityRecord::new(capability.clone(), manifest.clone(), base_url);
+        let record = CapabilityRecord::new(capability.clone(), manifest.clone(), base_url);
         self.registry.lock().await.insert(record);
         tracing::info!(
             capability = %capability,
@@ -176,9 +175,7 @@ impl Client {
                     intent,
                 });
             }
-            let schema = record
-                .input_schemas()
-                .and_then(|m| m.get(&intent).cloned());
+            let schema = record.input_schemas().and_then(|m| m.get(&intent).cloned());
             (
                 record.backend().clone(),
                 record.manifest().auth().clone(),
@@ -256,9 +253,7 @@ impl Client {
         body: serde_json::Value,
     ) -> Result<
         std::pin::Pin<
-            Box<
-                dyn futures_util::Stream<Item = Result<serde_json::Value, ClientError>> + Send,
-            >,
+            Box<dyn futures_util::Stream<Item = Result<serde_json::Value, ClientError>> + Send>,
         >,
         ClientError,
     > {
@@ -311,9 +306,7 @@ impl Client {
                     }
                 }
             };
-            let schema = record
-                .input_schemas()
-                .and_then(|m| m.get(&intent).cloned());
+            let schema = record.input_schemas().and_then(|m| m.get(&intent).cloned());
             (
                 backend,
                 record.manifest().auth().clone(),
@@ -349,9 +342,8 @@ impl Client {
             return Ok(Box::pin(one_shot)
                 as std::pin::Pin<
                     Box<
-                        dyn futures_util::Stream<
-                                Item = Result<serde_json::Value, ClientError>,
-                            > + Send,
+                        dyn futures_util::Stream<Item = Result<serde_json::Value, ClientError>>
+                            + Send,
                     >,
                 >);
         }
@@ -431,11 +423,9 @@ impl Client {
         use futures_util::StreamExt;
         let stream_url = url.clone();
         let raw_bytes = Box::pin(resp.bytes_stream().map(move |chunk| {
-            chunk.map_err(|source| {
-                ferridis_protocol::ProtocolError::Transport {
-                    url: stream_url.clone(),
-                    source,
-                }
+            chunk.map_err(|source| ferridis_protocol::ProtocolError::Transport {
+                url: stream_url.clone(),
+                source,
             })
         }));
         let events = ferridis_protocol::parse_sse_stream(raw_bytes);
@@ -547,12 +537,8 @@ impl Client {
         let transport = crate::mcp::StdioTransport::spawn(command, args, env).await?;
         let (mcp_client, tools) =
             crate::mcp::McpClient::handshake(transport, "ferridis-client").await?;
-        let projected = crate::mcp::project_tools_to_manifest(
-            mcp_client.server_name(),
-            "mcp",
-            "v1",
-            &tools,
-        )?;
+        let projected =
+            crate::mcp::project_tools_to_manifest(mcp_client.server_name(), "mcp", "v1", &tools)?;
         let capability = projected.capability.clone();
         let record = crate::registry::CapabilityRecord::with_backend(
             capability.clone(),
@@ -583,12 +569,8 @@ impl Client {
         transport.bind_origin(&sse_url).await?;
         let (mcp_client, tools) =
             crate::mcp::McpClient::handshake(transport, "ferridis-client").await?;
-        let projected = crate::mcp::project_tools_to_manifest(
-            mcp_client.server_name(),
-            "mcp",
-            "v1",
-            &tools,
-        )?;
+        let projected =
+            crate::mcp::project_tools_to_manifest(mcp_client.server_name(), "mcp", "v1", &tools)?;
         let capability = projected.capability.clone();
         let record = crate::registry::CapabilityRecord::with_backend(
             capability.clone(),
@@ -640,9 +622,10 @@ impl Client {
     ) -> Result<Manifest, ClientError> {
         let mesh = MeshClient::new(self.http.clone(), mesh_root.clone());
         let artifact = mesh.fetch_and_verify(&capability).await?;
-        let manifest = Manifest::parse(std::str::from_utf8(&artifact.manifest_bytes).map_err(
-            |e| ClientError::WalletParse(format!("mesh manifest not UTF-8: {e}")),
-        )?)?;
+        let manifest = Manifest::parse(
+            std::str::from_utf8(&artifact.manifest_bytes)
+                .map_err(|e| ClientError::WalletParse(format!("mesh manifest not UTF-8: {e}")))?,
+        )?;
         let base_url = manifest
             .endpoint_url()
             .cloned()
@@ -692,9 +675,10 @@ impl Client {
         fallback_base_url: Option<Url>,
     ) -> Result<Manifest, ClientError> {
         let artifact = federation.fetch_and_verify(&capability).await?;
-        let manifest = Manifest::parse(std::str::from_utf8(&artifact.manifest_bytes).map_err(
-            |e| ClientError::WalletParse(format!("federated mesh manifest not UTF-8: {e}")),
-        )?)?;
+        let manifest =
+            Manifest::parse(std::str::from_utf8(&artifact.manifest_bytes).map_err(|e| {
+                ClientError::WalletParse(format!("federated mesh manifest not UTF-8: {e}"))
+            })?)?;
         let base_url = manifest
             .endpoint_url()
             .cloned()
@@ -919,7 +903,9 @@ impl Client {
                 Some(conn.access_token().expose().to_string())
             }
             ferridis_core::AuthMethod::ApiKey { .. } => {
-                return Err(ClientError::UnsupportedAuthMethod("ApiKey auth for WebSocket"));
+                return Err(ClientError::UnsupportedAuthMethod(
+                    "ApiKey auth for WebSocket",
+                ));
             }
         };
         let ws_url = http_url_to_ws(&base_url, channel)?;
@@ -1007,7 +993,7 @@ fn http_url_to_ws(base_url: &Url, channel: &str) -> Result<Url, ClientError> {
         other => {
             return Err(ClientError::InvalidUrl(format!(
                 "cannot convert scheme `{other}` to WebSocket"
-            )))
+            )));
         }
     };
     url.set_scheme(ws_scheme)
@@ -1050,7 +1036,10 @@ mod tests {
         let base = Url::parse("https://example.invalid/fs").unwrap();
         let intent = IntentVerb::parse("write-file").unwrap();
         let url = build_intent_url(&base, &intent).unwrap();
-        assert_eq!(url.as_str(), "https://example.invalid/fs/intents/write-file");
+        assert_eq!(
+            url.as_str(),
+            "https://example.invalid/fs/intents/write-file"
+        );
     }
 
     fn cap(seg: &str) -> CapabilityRef {
@@ -1086,10 +1075,12 @@ mod tests {
         // child rejected it. Pre-flight catches this now.
         let intent = IntentVerb::parse("journal-query").unwrap();
         let body = serde_json::json!({ "limit": "5" });
-        let err = validate_dispatch_body(&cap("a"), &intent, &journal_query_schema(), &body)
-            .unwrap_err();
+        let err =
+            validate_dispatch_body(&cap("a"), &intent, &journal_query_schema(), &body).unwrap_err();
         match err {
-            ClientError::InvalidArgs { intent: i, details, .. } => {
+            ClientError::InvalidArgs {
+                intent: i, details, ..
+            } => {
                 assert_eq!(i.as_str(), "journal-query");
                 assert!(
                     details.to_lowercase().contains("integer")
@@ -1106,8 +1097,7 @@ mod tests {
         let intent = IntentVerb::parse("journal-query").unwrap();
         let body = serde_json::json!({ "limit": 99999 });
         assert!(
-            validate_dispatch_body(&cap("a"), &intent, &journal_query_schema(), &body)
-                .is_err(),
+            validate_dispatch_body(&cap("a"), &intent, &journal_query_schema(), &body).is_err(),
             "limit=99999 exceeds schema maximum"
         );
     }
@@ -1117,8 +1107,7 @@ mod tests {
         let intent = IntentVerb::parse("journal-query").unwrap();
         let body = serde_json::json!({ "unit": "ssh.service", "extra_field": "x" });
         assert!(
-            validate_dispatch_body(&cap("a"), &intent, &journal_query_schema(), &body)
-                .is_err(),
+            validate_dispatch_body(&cap("a"), &intent, &journal_query_schema(), &body).is_err(),
             "additionalProperties:false should reject extra_field"
         );
     }

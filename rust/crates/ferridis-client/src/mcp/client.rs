@@ -192,8 +192,8 @@ impl McpClient {
         let result_val = resp.get("result").cloned().ok_or_else(|| {
             ClientError::WalletIo("MCP tools/call: no result and no error".into())
         })?;
-        let result: ToolsCallResult = serde_json::from_value(result_val.clone())
-            .map_err(ClientError::from)?;
+        let result: ToolsCallResult =
+            serde_json::from_value(result_val.clone()).map_err(ClientError::from)?;
 
         let mut text = String::new();
         for part in &result.content {

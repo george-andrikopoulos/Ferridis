@@ -149,7 +149,10 @@ mod tests {
 
     #[test]
     fn token_parse_rejects_empty() {
-        assert!(matches!(IntegrationToken::parse(""), Err(NotionError::EmptyToken)));
+        assert!(matches!(
+            IntegrationToken::parse(""),
+            Err(NotionError::EmptyToken)
+        ));
     }
 
     #[test]
@@ -160,7 +163,10 @@ mod tests {
 
     #[test]
     fn database_id_rejects_empty() {
-        assert!(matches!(DatabaseId::parse(""), Err(NotionError::EmptyDatabaseId)));
+        assert!(matches!(
+            DatabaseId::parse(""),
+            Err(NotionError::EmptyDatabaseId)
+        ));
     }
 
     #[test]

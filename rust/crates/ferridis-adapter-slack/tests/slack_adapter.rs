@@ -1,30 +1,42 @@
 //! End-to-end integration tests for `ferridis-adapter-slack`.
 
-use std::net::SocketAddr;
-use ferridis_adapter_slack::{BotToken, SlackCapability};
 use ferridis_adapter_sdk::AdapterServer;
+use ferridis_adapter_slack::{BotToken, SlackCapability};
 use reqwest::StatusCode;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
+use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 async fn start_adapter(slack_mock: &MockServer) -> SocketAddr {
     let token = BotToken::parse("xoxb-test").expect("valid token");
-    let cap = SlackCapability::new(token).expect("capability").with_api_base_url(slack_mock.uri());
+    let cap = SlackCapability::new(token)
+        .expect("capability")
+        .with_api_base_url(slack_mock.uri());
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap(); // allow:unwrap test-only
     let addr = listener.local_addr().unwrap(); // allow:unwrap test-only
-    tokio::spawn(async move { axum::serve(listener, AdapterServer::new(cap).into_router()).await.unwrap_or_default() });
+    tokio::spawn(async move {
+        axum::serve(listener, AdapterServer::new(cap).into_router())
+            .await
+            .unwrap_or_default()
+    });
     addr
 }
 
-fn http() -> reqwest::Client { reqwest::Client::new() }
+fn http() -> reqwest::Client {
+    reqwest::Client::new()
+}
 
 #[tokio::test]
 async fn manifest_is_served() {
     let slack = MockServer::start().await;
     let addr = start_adapter(&slack).await;
-    let res = http().get(format!("http://{addr}/manifest.json")).send().await.expect("GET manifest");
+    let res = http()
+        .get(format!("http://{addr}/manifest.json"))
+        .send()
+        .await
+        .expect("GET manifest");
     assert_eq!(res.status(), StatusCode::OK);
     let body: Value = res.json().await.expect("JSON");
     assert_eq!(body["id"], "ferridis.slack.v1");
@@ -34,18 +46,25 @@ async fn manifest_is_served() {
 #[tokio::test]
 async fn list_channels_returns_channel_list() {
     let slack = MockServer::start().await;
-    Mock::given(method("GET")).and(path("/conversations.list"))
+    Mock::given(method("GET"))
+        .and(path("/conversations.list"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "ok": true,
             "channels": [
                 { "id": "C001", "name": "general" },
                 { "id": "C002", "name": "random" },
             ]
-        }))).mount(&slack).await;
+        })))
+        .mount(&slack)
+        .await;
 
     let addr = start_adapter(&slack).await;
-    let res = http().post(format!("http://{addr}/intents/list-channels"))
-        .json(&json!({})).send().await.expect("list-channels");
+    let res = http()
+        .post(format!("http://{addr}/intents/list-channels"))
+        .json(&json!({}))
+        .send()
+        .await
+        .expect("list-channels");
     assert_eq!(res.status(), StatusCode::OK);
     let body: Value = res.json().await.expect("JSON");
     assert_eq!(body["channels"].as_array().expect("array").len(), 2);
@@ -54,18 +73,24 @@ async fn list_channels_returns_channel_list() {
 #[tokio::test]
 async fn post_message_returns_message() {
     let slack = MockServer::start().await;
-    Mock::given(method("POST")).and(path("/chat.postMessage"))
+    Mock::given(method("POST"))
+        .and(path("/chat.postMessage"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "ok": true,
             "ts": "1234567890.000001",
             "channel": "C001",
             "message": { "text": "Hello!" }
-        }))).mount(&slack).await;
+        })))
+        .mount(&slack)
+        .await;
 
     let addr = start_adapter(&slack).await;
-    let res = http().post(format!("http://{addr}/intents/post-message"))
+    let res = http()
+        .post(format!("http://{addr}/intents/post-message"))
         .json(&json!({ "channel": "C001", "text": "Hello!" }))
-        .send().await.expect("post-message");
+        .send()
+        .await
+        .expect("post-message");
     assert_eq!(res.status(), StatusCode::OK);
     let body: Value = res.json().await.expect("JSON");
     assert_eq!(body["ok"], true);
@@ -75,16 +100,23 @@ async fn post_message_returns_message() {
 #[tokio::test]
 async fn get_messages_passes_channel_param() {
     let slack = MockServer::start().await;
-    Mock::given(method("GET")).and(path("/conversations.history"))
+    Mock::given(method("GET"))
+        .and(path("/conversations.history"))
         .and(query_param("channel", "C001"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "ok": true,
             "messages": [{ "ts": "123", "text": "Hi" }]
-        }))).mount(&slack).await;
+        })))
+        .mount(&slack)
+        .await;
 
     let addr = start_adapter(&slack).await;
-    let res = http().post(format!("http://{addr}/intents/get-messages"))
-        .json(&json!({ "channel": "C001" })).send().await.expect("get-messages");
+    let res = http()
+        .post(format!("http://{addr}/intents/get-messages"))
+        .json(&json!({ "channel": "C001" }))
+        .send()
+        .await
+        .expect("get-messages");
     assert_eq!(res.status(), StatusCode::OK);
     let body: Value = res.json().await.expect("JSON");
     assert_eq!(body["messages"].as_array().expect("array").len(), 1);
@@ -93,19 +125,28 @@ async fn get_messages_passes_channel_param() {
 #[tokio::test]
 async fn send_dm_opens_channel_then_posts() {
     let slack = MockServer::start().await;
-    Mock::given(method("POST")).and(path("/conversations.open"))
+    Mock::given(method("POST"))
+        .and(path("/conversations.open"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "ok": true, "channel": { "id": "D001" }
-        }))).mount(&slack).await;
-    Mock::given(method("POST")).and(path("/chat.postMessage"))
+        })))
+        .mount(&slack)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/chat.postMessage"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "ok": true, "ts": "999", "channel": "D001"
-        }))).mount(&slack).await;
+        })))
+        .mount(&slack)
+        .await;
 
     let addr = start_adapter(&slack).await;
-    let res = http().post(format!("http://{addr}/intents/send-dm"))
+    let res = http()
+        .post(format!("http://{addr}/intents/send-dm"))
         .json(&json!({ "user_id": "U001", "text": "Hey!" }))
-        .send().await.expect("send-dm");
+        .send()
+        .await
+        .expect("send-dm");
     assert_eq!(res.status(), StatusCode::OK);
     let body: Value = res.json().await.expect("JSON");
     assert_eq!(body["channel"], "D001");
@@ -114,15 +155,22 @@ async fn send_dm_opens_channel_then_posts() {
 #[tokio::test]
 async fn get_channel_info_returns_info() {
     let slack = MockServer::start().await;
-    Mock::given(method("GET")).and(path("/conversations.info"))
+    Mock::given(method("GET"))
+        .and(path("/conversations.info"))
         .and(query_param("channel", "C001"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "ok": true, "channel": { "id": "C001", "name": "general", "is_channel": true }
-        }))).mount(&slack).await;
+        })))
+        .mount(&slack)
+        .await;
 
     let addr = start_adapter(&slack).await;
-    let res = http().post(format!("http://{addr}/intents/get-channel-info"))
-        .json(&json!({ "channel": "C001" })).send().await.expect("get-channel-info");
+    let res = http()
+        .post(format!("http://{addr}/intents/get-channel-info"))
+        .json(&json!({ "channel": "C001" }))
+        .send()
+        .await
+        .expect("get-channel-info");
     assert_eq!(res.status(), StatusCode::OK);
     let body: Value = res.json().await.expect("JSON");
     assert_eq!(body["channel"]["name"], "general");
@@ -131,15 +179,22 @@ async fn get_channel_info_returns_info() {
 #[tokio::test]
 async fn list_users_returns_members() {
     let slack = MockServer::start().await;
-    Mock::given(method("GET")).and(path("/users.list"))
+    Mock::given(method("GET"))
+        .and(path("/users.list"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "ok": true,
             "members": [{ "id": "U001", "name": "alice" }]
-        }))).mount(&slack).await;
+        })))
+        .mount(&slack)
+        .await;
 
     let addr = start_adapter(&slack).await;
-    let res = http().post(format!("http://{addr}/intents/list-users"))
-        .json(&json!({})).send().await.expect("list-users");
+    let res = http()
+        .post(format!("http://{addr}/intents/list-users"))
+        .json(&json!({}))
+        .send()
+        .await
+        .expect("list-users");
     assert_eq!(res.status(), StatusCode::OK);
     let body: Value = res.json().await.expect("JSON");
     assert_eq!(body["members"].as_array().expect("array").len(), 1);
@@ -149,8 +204,12 @@ async fn list_users_returns_members() {
 async fn unknown_intent_returns_404() {
     let slack = MockServer::start().await;
     let addr = start_adapter(&slack).await;
-    let res = http().post(format!("http://{addr}/intents/delete-everything"))
-        .json(&json!({})).send().await.expect("unknown");
+    let res = http()
+        .post(format!("http://{addr}/intents/delete-everything"))
+        .json(&json!({}))
+        .send()
+        .await
+        .expect("unknown");
     assert_eq!(res.status(), StatusCode::NOT_FOUND);
 }
 
@@ -158,7 +217,11 @@ async fn unknown_intent_returns_404() {
 async fn missing_channel_returns_400() {
     let slack = MockServer::start().await;
     let addr = start_adapter(&slack).await;
-    let res = http().post(format!("http://{addr}/intents/post-message"))
-        .json(&json!({ "text": "oops" })).send().await.expect("missing field");
+    let res = http()
+        .post(format!("http://{addr}/intents/post-message"))
+        .json(&json!({ "text": "oops" }))
+        .send()
+        .await
+        .expect("missing field");
     assert_eq!(res.status(), StatusCode::BAD_REQUEST);
 }

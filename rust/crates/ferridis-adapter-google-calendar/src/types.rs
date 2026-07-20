@@ -178,7 +178,11 @@ impl OAuthCredentials {
         client_id: ClientId,
         client_secret: ClientSecret,
     ) -> Self {
-        Self { refresh_token, client_id, client_secret }
+        Self {
+            refresh_token,
+            client_id,
+            client_secret,
+        }
     }
 }
 
@@ -266,7 +270,10 @@ mod tests {
 
     #[test]
     fn access_token_rejects_empty() {
-        assert!(matches!(AccessToken::parse(""), Err(GoogleCalendarError::EmptyToken)));
+        assert!(matches!(
+            AccessToken::parse(""),
+            Err(GoogleCalendarError::EmptyToken)
+        ));
     }
 
     #[test]
@@ -285,7 +292,10 @@ mod tests {
 
     #[test]
     fn client_id_rejects_empty() {
-        assert!(matches!(ClientId::parse(""), Err(GoogleCalendarError::EmptyClientId)));
+        assert!(matches!(
+            ClientId::parse(""),
+            Err(GoogleCalendarError::EmptyClientId)
+        ));
     }
 
     #[test]
@@ -304,6 +314,9 @@ mod tests {
 
     #[test]
     fn calendar_id_rejects_empty() {
-        assert!(matches!(CalendarId::parse(""), Err(GoogleCalendarError::EmptyCalendarId)));
+        assert!(matches!(
+            CalendarId::parse(""),
+            Err(GoogleCalendarError::EmptyCalendarId)
+        ));
     }
 }

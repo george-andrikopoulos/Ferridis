@@ -309,7 +309,9 @@ mod tests {
         let server = MockServer::start().await;
         Mock::given(method("POST"))
             .and(path("/token"))
-            .respond_with(ResponseTemplate::new(400).set_body_string(r#"{"error":"invalid_grant"}"#))
+            .respond_with(
+                ResponseTemplate::new(400).set_body_string(r#"{"error":"invalid_grant"}"#),
+            )
             .mount(&server)
             .await;
 

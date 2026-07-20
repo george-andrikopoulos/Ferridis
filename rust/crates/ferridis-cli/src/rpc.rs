@@ -225,14 +225,16 @@ async fn method_register(
     client: &Client,
     params: serde_json::Value,
 ) -> Result<serde_json::Value, JsonRpcError> {
-    let p: RegisterParams = serde_json::from_value(params)
-        .map_err(|e| invalid_params(format!("expected {{capability, manifest_url, base_url}}: {e}")))?;
+    let p: RegisterParams = serde_json::from_value(params).map_err(|e| {
+        invalid_params(format!(
+            "expected {{capability, manifest_url, base_url}}: {e}"
+        ))
+    })?;
     let capability = CapabilityRef::parse(&p.capability)
         .map_err(|e| invalid_params(format!("capability: {e}")))?;
-    let manifest_url = Url::parse(&p.manifest_url)
-        .map_err(|e| invalid_params(format!("manifest_url: {e}")))?;
-    let base_url = Url::parse(&p.base_url)
-        .map_err(|e| invalid_params(format!("base_url: {e}")))?;
+    let manifest_url =
+        Url::parse(&p.manifest_url).map_err(|e| invalid_params(format!("manifest_url: {e}")))?;
+    let base_url = Url::parse(&p.base_url).map_err(|e| invalid_params(format!("base_url: {e}")))?;
     let manifest = client
         .register(capability.clone(), manifest_url, base_url)
         .await
@@ -243,7 +245,11 @@ async fn method_register(
         name: manifest.name().to_string(),
         category: manifest.category().as_str().to_string(),
         summary: manifest.summary().as_str().to_string(),
-        intents: manifest.intents().iter().map(|i| i.as_str().to_string()).collect(),
+        intents: manifest
+            .intents()
+            .iter()
+            .map(|i| i.as_str().to_string())
+            .collect(),
         tiers: tier_strings(&manifest),
         auth: auth_label(manifest.auth()),
     };
@@ -256,8 +262,8 @@ async fn method_candidates(
 ) -> Result<serde_json::Value, JsonRpcError> {
     let p: CandidatesParams = serde_json::from_value(params)
         .map_err(|e| invalid_params(format!("expected {{intent}}: {e}")))?;
-    let intent = IntentVerb::parse(&p.intent)
-        .map_err(|e| invalid_params(format!("intent: {e}")))?;
+    let intent =
+        IntentVerb::parse(&p.intent).map_err(|e| invalid_params(format!("intent: {e}")))?;
     let candidates = client.candidates_for_intent(&intent).await;
     let out: Vec<String> = candidates.into_iter().map(|c| c.to_string()).collect();
     Ok(serde_json::to_value(out).expect("Vec<String> serializes"))
@@ -271,8 +277,8 @@ async fn method_dispatch(
         .map_err(|e| invalid_params(format!("expected {{capability, intent, body}}: {e}")))?;
     let capability = CapabilityRef::parse(&p.capability)
         .map_err(|e| invalid_params(format!("capability: {e}")))?;
-    let intent = IntentVerb::parse(&p.intent)
-        .map_err(|e| invalid_params(format!("intent: {e}")))?;
+    let intent =
+        IntentVerb::parse(&p.intent).map_err(|e| invalid_params(format!("intent: {e}")))?;
     client
         .dispatch(&capability, intent, p.body)
         .await
@@ -292,9 +298,7 @@ async fn method_insert_connection(
     Ok(serde_json::Value::Null)
 }
 
-async fn method_list_capabilities(
-    client: &Client,
-) -> Result<serde_json::Value, JsonRpcError> {
+async fn method_list_capabilities(client: &Client) -> Result<serde_json::Value, JsonRpcError> {
     let registry = client.registry().lock().await;
     let out: Vec<CapabilityInfo> = registry
         .iter()

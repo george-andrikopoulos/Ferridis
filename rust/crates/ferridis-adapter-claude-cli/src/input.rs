@@ -129,10 +129,7 @@ pub struct AllowedCwd(PathBuf);
 
 impl AllowedCwd {
     /// Validate a user-supplied cwd against `allowed_roots`.
-    pub fn parse(
-        user_path: &str,
-        allowed_roots: &AllowedRoots,
-    ) -> Result<Self, InputError> {
+    pub fn parse(user_path: &str, allowed_roots: &AllowedRoots) -> Result<Self, InputError> {
         let p = Path::new(user_path);
         if !p.is_absolute() {
             return Err(InputError::Cwd {
@@ -342,9 +339,7 @@ mod tests {
         std::fs::create_dir(&inside).unwrap();
         let outside = TempDir::new().unwrap();
 
-        let allow = AllowedRoots::empty()
-            .with_root(root.path())
-            .unwrap();
+        let allow = AllowedRoots::empty().with_root(root.path()).unwrap();
 
         // Inside is accepted.
         let cwd = AllowedCwd::parse(inside.to_str().unwrap(), &allow).unwrap();

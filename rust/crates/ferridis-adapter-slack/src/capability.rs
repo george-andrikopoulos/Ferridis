@@ -159,9 +159,13 @@ pub struct SlackCapability {
 impl SlackCapability {
     /// Build a capability from a bot token.
     pub fn new(token: BotToken) -> Result<Self, DispatchError> {
-        let manifest = Manifest::parse(DEFAULT_MANIFEST_JSON)
-            .map_err(|e| DispatchError::Internal(format!("default manifest failed to parse: {e}")))?;
-        Ok(Self { manifest, client: SlackClient::new(token) })
+        let manifest = Manifest::parse(DEFAULT_MANIFEST_JSON).map_err(|e| {
+            DispatchError::Internal(format!("default manifest failed to parse: {e}"))
+        })?;
+        Ok(Self {
+            manifest,
+            client: SlackClient::new(token),
+        })
     }
 
     /// Override the Slack API base URL (for tests).
@@ -188,40 +192,53 @@ impl Capability for SlackCapability {
         }
     }
 
-    async fn dispatch(
-        &self,
-        intent: &IntentVerb,
-        body: Value,
-    ) -> Result<Value, DispatchError> {
+    async fn dispatch(&self, intent: &IntentVerb, body: Value) -> Result<Value, DispatchError> {
         match intent.as_str() {
             "list-channels" => {
                 let limit = body.get("limit").and_then(|v| v.as_u64());
-                let exclude_archived =
-                    body.get("exclude_archived").and_then(|v| v.as_bool()).unwrap_or(true); // allow:unwrap using unwrap_or
-                self.client.list_channels(limit, exclude_archived).await.map_err(to_dispatch)
+                let exclude_archived = body
+                    .get("exclude_archived")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true); // allow:unwrap using unwrap_or
+                self.client
+                    .list_channels(limit, exclude_archived)
+                    .await
+                    .map_err(to_dispatch)
             }
 
             "post-message" => {
                 let channel = str_field(&body, "channel")?;
                 let text = str_field(&body, "text")?;
-                self.client.post_message(channel, text).await.map_err(to_dispatch)
+                self.client
+                    .post_message(channel, text)
+                    .await
+                    .map_err(to_dispatch)
             }
 
             "get-messages" => {
                 let channel = str_field(&body, "channel")?;
                 let limit = body.get("limit").and_then(|v| v.as_u64());
-                self.client.get_messages(channel, limit).await.map_err(to_dispatch)
+                self.client
+                    .get_messages(channel, limit)
+                    .await
+                    .map_err(to_dispatch)
             }
 
             "send-dm" => {
                 let user_id = str_field(&body, "user_id")?;
                 let text = str_field(&body, "text")?;
-                self.client.send_dm(user_id, text).await.map_err(to_dispatch)
+                self.client
+                    .send_dm(user_id, text)
+                    .await
+                    .map_err(to_dispatch)
             }
 
             "get-channel-info" => {
                 let channel = str_field(&body, "channel")?;
-                self.client.get_channel_info(channel).await.map_err(to_dispatch)
+                self.client
+                    .get_channel_info(channel)
+                    .await
+                    .map_err(to_dispatch)
             }
 
             "list-users" => {
@@ -249,7 +266,9 @@ fn to_dispatch(e: SlackError) -> DispatchError {
         SlackError::ApiError { code } if code == "not_authed" || code == "invalid_auth" => {
             DispatchError::Forbidden(format!("Slack auth error: {code}"))
         }
-        SlackError::ApiError { code } if code == "channel_not_found" || code == "user_not_found" => {
+        SlackError::ApiError { code }
+            if code == "channel_not_found" || code == "user_not_found" =>
+        {
             DispatchError::NotFound(code)
         }
         other => DispatchError::Internal(other.to_string()),

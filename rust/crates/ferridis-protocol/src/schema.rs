@@ -51,15 +51,16 @@ impl SchemaBytes {
 
 /// Fetch the raw schema bytes from the given URL.
 pub async fn fetch_schema(client: &Client, url: &Url) -> Result<SchemaBytes, ProtocolError> {
-    let resp = client
-        .http()
-        .get(url.clone())
-        .send()
-        .await
-        .map_err(|e| ProtocolError::Transport {
-            url: url.clone(),
-            source: e,
-        })?;
+    let resp =
+        client
+            .http()
+            .get(url.clone())
+            .send()
+            .await
+            .map_err(|e| ProtocolError::Transport {
+                url: url.clone(),
+                source: e,
+            })?;
 
     let status = resp.status();
     let content_type = resp
@@ -97,8 +98,7 @@ mod tests {
         Mock::given(method("GET"))
             .and(path("/schema.yaml"))
             .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_raw("openapi: 3.0.0\n", "application/yaml"),
+                ResponseTemplate::new(200).set_body_raw("openapi: 3.0.0\n", "application/yaml"),
             )
             .mount(&server)
             .await;

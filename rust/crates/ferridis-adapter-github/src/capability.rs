@@ -357,25 +357,31 @@ fn parse_body<T: serde::de::DeserializeOwned>(
     body: serde_json::Value,
     hint: &'static str,
 ) -> Result<T, DispatchError> {
-    serde_json::from_value(body)
-        .map_err(|e| DispatchError::InvalidRequest(format!("{hint}: {e}")))
+    serde_json::from_value(body).map_err(|e| DispatchError::InvalidRequest(format!("{hint}: {e}")))
 }
 
 fn parse_owner(s: &str) -> Result<crate::types::RepoOwner, DispatchError> {
-    crate::types::RepoOwner::parse(s)
-        .map_err(|e| DispatchError::InvalidRequest(e.to_string()))
+    crate::types::RepoOwner::parse(s).map_err(|e| DispatchError::InvalidRequest(e.to_string()))
 }
 
 fn parse_repo(s: &str) -> Result<crate::types::RepoName, DispatchError> {
-    crate::types::RepoName::parse(s)
-        .map_err(|e| DispatchError::InvalidRequest(e.to_string()))
+    crate::types::RepoName::parse(s).map_err(|e| DispatchError::InvalidRequest(e.to_string()))
 }
 
 fn map_github_error(e: GitHubError) -> DispatchError {
     match e {
-        GitHubError::ApiError { status: 404, message } => DispatchError::NotFound(message),
-        GitHubError::ApiError { status: 403, message } => DispatchError::Forbidden(message),
-        GitHubError::ApiError { status: 401, message } => DispatchError::Forbidden(message),
+        GitHubError::ApiError {
+            status: 404,
+            message,
+        } => DispatchError::NotFound(message),
+        GitHubError::ApiError {
+            status: 403,
+            message,
+        } => DispatchError::Forbidden(message),
+        GitHubError::ApiError {
+            status: 401,
+            message,
+        } => DispatchError::Forbidden(message),
         GitHubError::RateLimited { .. } => {
             DispatchError::Internal(format!("GitHub rate limit: {e}"))
         }

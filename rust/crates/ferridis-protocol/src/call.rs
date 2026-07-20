@@ -166,7 +166,9 @@ async fn send_and_handle(
         return Err(ProtocolError::ConsentRequired);
     }
     if status.as_u16() == 429 {
-        return Err(ProtocolError::RateLimited { retry_after_secs: 0 });
+        return Err(ProtocolError::RateLimited {
+            retry_after_secs: 0,
+        });
     }
     if !status.is_success() {
         let preview = String::from_utf8_lossy(&body[..body.len().min(256)]).into_owned();
@@ -210,8 +212,7 @@ mod tests {
             .and(header_exists("x-ferridis-connection"))
             .and(header("x-ferridis-intent", "send-message"))
             .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_raw(r#"{"id":"m1"}"#, "application/json"),
+                ResponseTemplate::new(200).set_body_raw(r#"{"id":"m1"}"#, "application/json"),
             )
             .mount(&server)
             .await;
@@ -255,7 +256,9 @@ mod tests {
         Mock::given(wmethod("POST"))
             .and(path("/intents/read-file"))
             .and(header("x-ferridis-intent", "read-file"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(r#"{"ok":true}"#, "application/json"))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_raw(r#"{"ok":true}"#, "application/json"),
+            )
             .mount(&server)
             .await;
 

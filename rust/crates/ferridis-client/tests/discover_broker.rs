@@ -17,9 +17,9 @@ async fn discover_broker_returns_handle() {
 #[tokio::test]
 async fn discover_broker_snapshot_is_synchronous() {
     use axum::{
+        Router,
         body::Body,
         routing::{get, post},
-        Router,
     };
     use bytes::Bytes;
     use futures_util::StreamExt as _;
@@ -56,10 +56,9 @@ async fn discover_broker_snapshot_is_synchronous() {
 
                     let rest = futures_util::stream::unfold(rx, |mut r| async move {
                         match r.recv().await {
-                            Ok(msg) => Some((
-                                Ok::<Bytes, std::convert::Infallible>(Bytes::from(msg)),
-                                r,
-                            )),
+                            Ok(msg) => {
+                                Some((Ok::<Bytes, std::convert::Infallible>(Bytes::from(msg)), r))
+                            }
                             Err(_) => None,
                         }
                     });
@@ -78,10 +77,7 @@ async fn discover_broker_snapshot_is_synchronous() {
                 let tx = Arc::clone(&post_tx);
                 async move {
                     let payload: Value = serde_json::from_str(&body).unwrap_or_default();
-                    let method = payload
-                        .get("method")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or(""); // allow:unwrap not used — using unwrap_or
+                    let method = payload.get("method").and_then(|v| v.as_str()).unwrap_or(""); // allow:unwrap not used — using unwrap_or
                     let id = payload.get("id").and_then(|v| v.as_u64());
 
                     match (method, id) {
@@ -98,7 +94,8 @@ async fn discover_broker_snapshot_is_synchronous() {
                             let event = format!("event: message\ndata: {}\n\n", resp);
                             let _ = tx.send(event);
                         }
-                        ("notifications/initialized", _) => { /* notification — no SSE response */ }
+                        ("notifications/initialized", _) => { /* notification — no SSE response */
+                        }
                         ("tools/list", Some(req_id)) => {
                             let resp = json!({
                                 "jsonrpc": "2.0",
@@ -131,8 +128,7 @@ async fn discover_broker_snapshot_is_synchronous() {
 
     // ---- Broker snapshot stub -----------------------------------------------
     // Points to the MCP SSE stub spun above.
-    let snapshot =
-        format!(r#"[{{"kind":"mcp","name":"test-svc","url":"http://{mcp_addr}/sse"}}]"#);
+    let snapshot = format!(r#"[{{"kind":"mcp","name":"test-svc","url":"http://{mcp_addr}/sse"}}]"#);
 
     let broker_app = Router::new().route(
         "/discovery/services",
@@ -146,8 +142,7 @@ async fn discover_broker_snapshot_is_synchronous() {
     tokio::spawn(axum::serve(broker_listener, broker_app).into_future());
 
     let client = Client::ephemeral();
-    let broker_url: url::Url =
-        format!("http://{broker_addr}/").parse().unwrap(); // allow:unwrap test-only literal
+    let broker_url: url::Url = format!("http://{broker_addr}/").parse().unwrap(); // allow:unwrap test-only literal
 
     let handle = client.discover_broker(broker_url).await;
 

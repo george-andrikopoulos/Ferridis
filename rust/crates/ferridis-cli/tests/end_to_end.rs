@@ -78,13 +78,11 @@ impl Sidecar {
 
         let mut response = String::new();
         // The sidecar writes one response per request, line-delimited.
-        let read = tokio::time::timeout(
-            Duration::from_secs(5),
-            self.stdout.read_line(&mut response),
-        )
-        .await
-        .expect("response timeout")
-        .expect("response read");
+        let read =
+            tokio::time::timeout(Duration::from_secs(5), self.stdout.read_line(&mut response))
+                .await
+                .expect("response timeout")
+                .expect("response read");
         assert!(read > 0, "sidecar closed stdout unexpectedly");
         serde_json::from_str(&response).expect("response is valid JSON")
     }
@@ -173,9 +171,7 @@ async fn full_path_register_dispatch_read_file() {
 async fn unknown_method_returns_jsonrpc_error() {
     let mut sidecar = Sidecar::spawn().await;
 
-    let resp = sidecar
-        .call(9, "no_such_method", json!(null))
-        .await;
+    let resp = sidecar.call(9, "no_such_method", json!(null)).await;
     assert_eq!(resp["id"], 9);
     let err = &resp["error"];
     assert_eq!(err["code"], -32601);
@@ -187,11 +183,7 @@ async fn unknown_method_returns_jsonrpc_error() {
 async fn malformed_json_returns_parse_error() {
     let mut sidecar = Sidecar::spawn().await;
 
-    sidecar
-        .stdin
-        .write_all(b"not json at all\n")
-        .await
-        .unwrap();
+    sidecar.stdin.write_all(b"not json at all\n").await.unwrap();
     sidecar.stdin.flush().await.unwrap();
 
     let mut response = String::new();

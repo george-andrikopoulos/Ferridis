@@ -204,7 +204,9 @@ mod tests {
     #[test]
     fn rejects_invalid_version() {
         assert!(CapabilityRef::parse("ferridis://public.ferridis.io/google/calendar@3").is_err());
-        assert!(CapabilityRef::parse("ferridis://public.ferridis.io/google/calendar@vfoo").is_err());
+        assert!(
+            CapabilityRef::parse("ferridis://public.ferridis.io/google/calendar@vfoo").is_err()
+        );
     }
 
     #[test]

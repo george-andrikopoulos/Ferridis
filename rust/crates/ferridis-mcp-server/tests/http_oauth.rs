@@ -22,9 +22,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use base64::Engine;
-use ferridis_adapter_sdk::{
-    AdapterServer, Capability, DispatchError, IntentStream, SchemaSource,
-};
+use ferridis_adapter_sdk::{AdapterServer, Capability, DispatchError, IntentStream, SchemaSource};
 use ferridis_core::{IntentVerb, Manifest};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -61,11 +59,7 @@ impl Capability for Oauthy {
             body: "openapi: 3.0.0\n".into(),
         }
     }
-    async fn dispatch(
-        &self,
-        intent: &IntentVerb,
-        _body: Value,
-    ) -> Result<Value, DispatchError> {
+    async fn dispatch(&self, intent: &IntentVerb, _body: Value) -> Result<Value, DispatchError> {
         Err(DispatchError::UnsupportedIntent(intent.clone()))
     }
     async fn dispatch_stream(
@@ -183,7 +177,9 @@ async fn oauth_full_dance_and_mcp_call() {
 
     // ---- 1. discovery ----
     let md: Value = client
-        .get(format!("http://{bind}/.well-known/oauth-authorization-server"))
+        .get(format!(
+            "http://{bind}/.well-known/oauth-authorization-server"
+        ))
         .send()
         .await
         .unwrap()
@@ -201,8 +197,7 @@ async fn oauth_full_dance_and_mcp_call() {
     );
     let authorize_endpoint = md["authorization_endpoint"].as_str().unwrap().to_string();
     let token_endpoint = md["token_endpoint"].as_str().unwrap().to_string();
-    let registration_endpoint =
-        md["registration_endpoint"].as_str().unwrap().to_string();
+    let registration_endpoint = md["registration_endpoint"].as_str().unwrap().to_string();
 
     // ---- 2. dynamic client registration ----
     let reg: Value = client
@@ -418,7 +413,13 @@ async fn pkce_mismatch_on_token_exchange_400s() {
         .send()
         .await
         .unwrap();
-    let location = auth.headers().get("location").unwrap().to_str().unwrap().to_string();
+    let location = auth
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
     let parsed = url::Url::parse(&location).unwrap();
     let code = parsed
         .query_pairs()
@@ -519,7 +520,12 @@ async fn mcp_endpoint_also_served_at_root_path() {
     let reg: Value = client
         .post(format!("http://{bind}/register"))
         .json(&json!({"redirect_uris": ["https://claude.ai/api/mcp/auth_callback"]}))
-        .send().await.unwrap().json().await.unwrap();
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
     let client_id = reg["client_id"].as_str().unwrap().to_string();
 
     let (verifier, challenge) = pkce_pair();
@@ -532,10 +538,22 @@ async fn mcp_endpoint_also_served_at_root_path() {
             ("code_challenge", challenge.as_str()),
             ("code_challenge_method", "S256"),
         ])
-        .send().await.unwrap();
-    let loc = auth.headers().get("location").unwrap().to_str().unwrap().to_string();
-    let code = url::Url::parse(&loc).unwrap()
-        .query_pairs().find(|(k, _)| k == "code").map(|(_, v)| v.into_owned()).unwrap();
+        .send()
+        .await
+        .unwrap();
+    let loc = auth
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let code = url::Url::parse(&loc)
+        .unwrap()
+        .query_pairs()
+        .find(|(k, _)| k == "code")
+        .map(|(_, v)| v.into_owned())
+        .unwrap();
 
     let tok: Value = client
         .post(format!("http://{bind}/token"))
@@ -546,7 +564,12 @@ async fn mcp_endpoint_also_served_at_root_path() {
             ("client_id", client_id.as_str()),
             ("code_verifier", verifier.as_str()),
         ])
-        .send().await.unwrap().json().await.unwrap();
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
     let access = tok["access_token"].as_str().unwrap().to_string();
 
     // Compare both endpoints with the same JSON-RPC payload.
@@ -565,14 +588,14 @@ async fn mcp_endpoint_also_served_at_root_path() {
             .await
             .unwrap();
         assert_eq!(
-            resp.status(), 200,
+            resp.status(),
+            200,
             "POST {path} must be served as MCP, got {:?}",
             resp.status()
         );
         let r: Value = resp.json().await.unwrap();
         assert_eq!(
-            r["result"]["serverInfo"]["name"],
-            "ferridis",
+            r["result"]["serverInfo"]["name"], "ferridis",
             "POST {path} did not return an MCP initialize result"
         );
     }
@@ -602,7 +625,10 @@ async fn unmapped_route_returns_404_and_logs() {
     let body: Value = resp.json().await.unwrap();
     assert_eq!(body["error"], "not_found");
     assert!(
-        body["detail"].as_str().unwrap().contains("/this/does/not/exist"),
+        body["detail"]
+            .as_str()
+            .unwrap()
+            .contains("/this/does/not/exist"),
         "404 body must echo the path so journalctl-vs-curl correlation is trivial"
     );
 

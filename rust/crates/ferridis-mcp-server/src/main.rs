@@ -79,7 +79,9 @@ async fn main() {
         "ferridis-mcp-server starting"
     );
 
-    if !args.use_memory_wallet && let Err(e) = check_legacy_wallet() {
+    if !args.use_memory_wallet
+        && let Err(e) = check_legacy_wallet()
+    {
         error!(error = %e, "legacy plaintext wallet detected");
         std::process::exit(1);
     }
@@ -187,9 +189,8 @@ async fn main() {
             bearer,
             oauth_issuer,
         } => {
-            let oauth = oauth_issuer.map(|issuer| {
-                Arc::new(crate::oauth_server::OAuthServer::new(issuer))
-            });
+            let oauth =
+                oauth_issuer.map(|issuer| Arc::new(crate::oauth_server::OAuthServer::new(issuer)));
             let cfg = http_transport::HttpConfig {
                 bind,
                 bearer,
@@ -253,8 +254,7 @@ struct AdapterRegistrationFailure {
 /// stalled adapter still becomes responsive within a UI-acceptable
 /// window. A slow-failing adapter is indistinguishable from a hung one
 /// from the host's perspective.
-const ADAPTER_REGISTRATION_TIMEOUT: std::time::Duration =
-    std::time::Duration::from_secs(10);
+const ADAPTER_REGISTRATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
 /// Register every adapter in `adapters` independently, never aborting
 /// on a single failure.
@@ -284,13 +284,7 @@ async fn register_adapters(
             } => (
                 AdapterKind::Native,
                 capability.clone(),
-                with_timeout(register_native(
-                    client,
-                    capability,
-                    manifest_url,
-                    base_url,
-                ))
-                .await,
+                with_timeout(register_native(client, capability, manifest_url, base_url)).await,
             ),
             AdapterConfig::McpSse { mcp_sse_url } => (
                 AdapterKind::McpSse,
@@ -344,12 +338,11 @@ async fn register_native(
     manifest_url: &str,
     base_url: &str,
 ) -> Result<AdapterEntry, String> {
-    let cap_ref = CapabilityRef::parse(capability)
-        .map_err(|e| format!("capability {capability}: {e}"))?;
-    let manifest_url = Url::parse(manifest_url)
-        .map_err(|e| format!("manifestUrl {manifest_url}: {e}"))?;
-    let base_url =
-        Url::parse(base_url).map_err(|e| format!("baseUrl {base_url}: {e}"))?;
+    let cap_ref =
+        CapabilityRef::parse(capability).map_err(|e| format!("capability {capability}: {e}"))?;
+    let manifest_url =
+        Url::parse(manifest_url).map_err(|e| format!("manifestUrl {manifest_url}: {e}"))?;
+    let base_url = Url::parse(base_url).map_err(|e| format!("baseUrl {base_url}: {e}"))?;
     let manifest = client
         .register(cap_ref.clone(), manifest_url, base_url)
         .await
@@ -362,8 +355,7 @@ async fn register_native(
 }
 
 async fn register_mcp_sse(client: &Client, mcp_sse_url: &str) -> Result<AdapterEntry, String> {
-    let sse_url = Url::parse(mcp_sse_url)
-        .map_err(|e| format!("mcpSseUrl {mcp_sse_url}: {e}"))?;
+    let sse_url = Url::parse(mcp_sse_url).map_err(|e| format!("mcpSseUrl {mcp_sse_url}: {e}"))?;
     let cap_ref = client
         .register_mcp_sse(sse_url.clone())
         .await
@@ -384,10 +376,8 @@ async fn register_mcp_stdio(
     args: &[String],
     env: &std::collections::HashMap<String, String>,
 ) -> Result<AdapterEntry, String> {
-    let env_pairs: Vec<(String, String)> = env
-        .iter()
-        .map(|(k, v)| (k.clone(), v.clone()))
-        .collect();
+    let env_pairs: Vec<(String, String)> =
+        env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
     let cap_ref = client
         .register_mcp_stdio(command, args, &env_pairs)
         .await
@@ -402,7 +392,8 @@ async fn register_mcp_stdio(
     })
 }
 
-type SchemaMap = std::sync::Arc<std::collections::HashMap<ferridis_core::IntentVerb, serde_json::Value>>;
+type SchemaMap =
+    std::sync::Arc<std::collections::HashMap<ferridis_core::IntentVerb, serde_json::Value>>;
 
 async fn lookup_registered_record(
     client: &Client,
@@ -481,10 +472,7 @@ impl Args {
                     let v = args
                         .next()
                         .ok_or_else(|| "--http-bind expects an addr:port".to_string())?;
-                    http_bind = Some(
-                        v.parse()
-                            .map_err(|e| format!("--http-bind `{v}`: {e}"))?,
-                    );
+                    http_bind = Some(v.parse().map_err(|e| format!("--http-bind `{v}`: {e}"))?);
                 }
                 "--bearer-token" => {
                     let v = args
@@ -493,17 +481,16 @@ impl Args {
                     bearer_cli = Some(v);
                 }
                 "--oauth-public-base-url" => {
-                    let v = args.next().ok_or_else(|| {
-                        "--oauth-public-base-url expects a URL".to_string()
-                    })?;
+                    let v = args
+                        .next()
+                        .ok_or_else(|| "--oauth-public-base-url expects a URL".to_string())?;
                     oauth_public_base_url = Some(v);
                 }
                 "--discovery-broker" => {
                     let v = args
                         .next()
                         .ok_or_else(|| "--discovery-broker expects a URL".to_string())?;
-                    let u = Url::parse(&v)
-                        .map_err(|e| format!("--discovery-broker `{v}`: {e}"))?;
+                    let u = Url::parse(&v).map_err(|e| format!("--discovery-broker `{v}`: {e}"))?;
                     discovery_broker = Some(u);
                 }
                 "--help" | "-h" => {
@@ -531,21 +518,17 @@ impl Args {
         let transport = match http_bind {
             None => {
                 if bearer_cli.is_some() {
-                    return Err(
-                        "--bearer-token is only meaningful with --http-bind".to_string(),
-                    );
+                    return Err("--bearer-token is only meaningful with --http-bind".to_string());
                 }
                 if oauth_public_base_url.is_some() {
                     return Err(
-                        "--oauth-public-base-url is only meaningful with --http-bind"
-                            .to_string(),
+                        "--oauth-public-base-url is only meaningful with --http-bind".to_string(),
                     );
                 }
                 Transport::Stdio
             }
             Some(bind) => {
-                let bearer = bearer_cli
-                    .or_else(|| std::env::var("FERRIDIS_MCP_BEARER").ok());
+                let bearer = bearer_cli.or_else(|| std::env::var("FERRIDIS_MCP_BEARER").ok());
                 let oauth_issuer = oauth_public_base_url
                     .or_else(|| std::env::var("FERRIDIS_OAUTH_PUBLIC_BASE_URL").ok());
 
@@ -558,9 +541,8 @@ impl Args {
                 };
                 let oauth_issuer = match oauth_issuer {
                     Some(s) => {
-                        let mut u = url::Url::parse(&s).map_err(|e| {
-                            format!("--oauth-public-base-url `{s}`: {e}")
-                        })?;
+                        let mut u = url::Url::parse(&s)
+                            .map_err(|e| format!("--oauth-public-base-url `{s}`: {e}"))?;
                         // Trailing slash for clean joins later.
                         if !u.path().ends_with('/') {
                             u.set_path(&format!("{}/", u.path()));
@@ -577,14 +559,12 @@ impl Args {
                 };
 
                 if bearer.is_none() && oauth_issuer.is_none() {
-                    return Err(
-                        "--http-bind requires at least one auth path: \
+                    return Err("--http-bind requires at least one auth path: \
                          --bearer-token / FERRIDIS_MCP_BEARER (static bearer) \
                          and/or --oauth-public-base-url / FERRIDIS_OAUTH_PUBLIC_BASE_URL \
                          (OAuth 2.1 server, claude.ai-compatible). \
                          Refusing to publish unauthenticated."
-                            .to_string(),
-                    );
+                        .to_string());
                 }
 
                 Transport::Http {
@@ -605,9 +585,7 @@ impl Args {
     }
 
     fn print_help() {
-        eprintln!(
-            "Usage: ferridis-mcp-server --adapters-config <path> [options]"
-        );
+        eprintln!("Usage: ferridis-mcp-server --adapters-config <path> [options]");
         eprintln!();
         eprintln!("Required:");
         eprintln!("  --adapters-config <path>    JSON file listing adapters to publish.");
@@ -632,7 +610,9 @@ impl Args {
         eprintln!("                              via SSE push for new arrivals.");
         eprintln!();
         eprintln!("HTTP auth (at least one required when --http-bind is set):");
-        eprintln!("  --bearer-token <token>      Static bearer required on `Authorization` header.");
+        eprintln!(
+            "  --bearer-token <token>      Static bearer required on `Authorization` header."
+        );
         eprintln!("                              (also FERRIDIS_MCP_BEARER env var)");
         eprintln!("  --oauth-public-base-url URL Enable OAuth 2.1 + PKCE + DCR endpoints on the");
         eprintln!("                              listener. URL is the externally-facing base URL");

@@ -128,7 +128,9 @@ mod tests {
         std::fs::write(&path, body).unwrap();
         let cfg = load(&path).unwrap();
         assert_eq!(cfg.len(), 1);
-        assert!(matches!(cfg[0], AdapterConfig::Native { ref capability, .. } if capability == "ferridis://public.ferridis.io/ferridis/fs@v1"));
+        assert!(
+            matches!(cfg[0], AdapterConfig::Native { ref capability, .. } if capability == "ferridis://public.ferridis.io/ferridis/fs@v1")
+        );
     }
 
     #[test]

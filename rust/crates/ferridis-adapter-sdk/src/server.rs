@@ -87,9 +87,7 @@ async fn serve_manifest(State(cap): State<Arc<dyn Capability>>) -> Response {
             let meta = m.intent_metadata(v);
             let is_default = match meta {
                 None => true,
-                Some(md) => {
-                    matches!(md.kind, IntentKind::Request) && md.chunk_schema_url.is_none()
-                }
+                Some(md) => matches!(md.kind, IntentKind::Request) && md.chunk_schema_url.is_none(),
             };
             if is_default {
                 serde_json::Value::String(v.as_str().to_string())
@@ -152,12 +150,9 @@ async fn serve_manifest(State(cap): State<Arc<dyn Capability>>) -> Response {
 
 async fn serve_schema(State(cap): State<Arc<dyn Capability>>) -> Response {
     match cap.schema() {
-        SchemaSource::Embedded { content_type, body } => (
-            StatusCode::OK,
-            [(header::CONTENT_TYPE, content_type)],
-            body,
-        )
-            .into_response(),
+        SchemaSource::Embedded { content_type, body } => {
+            (StatusCode::OK, [(header::CONTENT_TYPE, content_type)], body).into_response()
+        }
         SchemaSource::Redirect { url } => Redirect::temporary(url.as_str()).into_response(),
     }
 }
@@ -195,10 +190,12 @@ async fn dispatch_intent(
             crate::validation::ValidationOutcome::Invalid { errors } => {
                 let details: Vec<serde_json::Value> = errors
                     .iter()
-                    .map(|e| serde_json::json!({
-                        "instance_path": e.instance_path,
-                        "detail": e.detail,
-                    }))
+                    .map(|e| {
+                        serde_json::json!({
+                            "instance_path": e.instance_path,
+                            "detail": e.detail,
+                        })
+                    })
                     .collect();
                 return (
                     StatusCode::UNPROCESSABLE_ENTITY,
@@ -247,15 +244,13 @@ async fn dispatch_stream_intent(
     let inner_stream = match stream_result {
         Ok(s) => s,
         Err(e) => {
-            let err_event = SseEvent::default()
-                .event("error")
-                .data(
-                    serde_json::to_string(&serde_json::json!({
-                        "status": e.status_code(),
-                        "message": e.to_string(),
-                    }))
-                    .unwrap_or_else(|_| String::from("\"adapter error\"")),
-                );
+            let err_event = SseEvent::default().event("error").data(
+                serde_json::to_string(&serde_json::json!({
+                    "status": e.status_code(),
+                    "message": e.to_string(),
+                }))
+                .unwrap_or_else(|_| String::from("\"adapter error\"")),
+            );
             let end_event = SseEvent::default().event("end").data("{}");
             let one_shot = futures_util::stream::iter(vec![
                 Ok::<SseEvent, Infallible>(err_event),
@@ -273,20 +268,15 @@ async fn dispatch_stream_intent(
             Ok(value) => Ok::<SseEvent, Infallible>(
                 SseEvent::default()
                     .event("chunk")
-                    .data(
-                        serde_json::to_string(&value)
-                            .unwrap_or_else(|_| String::from("null")),
-                    ),
+                    .data(serde_json::to_string(&value).unwrap_or_else(|_| String::from("null"))),
             ),
-            Err(e) => Ok(SseEvent::default()
-                .event("error")
-                .data(
-                    serde_json::to_string(&serde_json::json!({
-                        "status": e.status_code(),
-                        "message": e.to_string(),
-                    }))
-                    .unwrap_or_else(|_| String::from("\"adapter error\"")),
-                )),
+            Err(e) => Ok(SseEvent::default().event("error").data(
+                serde_json::to_string(&serde_json::json!({
+                    "status": e.status_code(),
+                    "message": e.to_string(),
+                }))
+                .unwrap_or_else(|_| String::from("\"adapter error\"")),
+            )),
         })
         // After the adapter's stream is exhausted, append a final
         // `event: end` so the consumer-side parser knows it's a

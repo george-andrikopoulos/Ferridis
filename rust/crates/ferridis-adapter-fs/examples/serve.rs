@@ -122,14 +122,13 @@ fn parse_args(argv: Vec<String>) -> Result<Args, String> {
             "--discovery-broker" => {
                 let v = it.next().ok_or("--discovery-broker expects a URL")?;
                 discovery_broker = Some(
-                    BrokerUrl::parse(&v)
-                        .map_err(|e| format!("--discovery-broker `{v}`: {e}"))?,
+                    BrokerUrl::parse(&v).map_err(|e| format!("--discovery-broker `{v}`: {e}"))?,
                 );
             }
             "--service-name" => {
                 let v = it.next().ok_or("--service-name expects a name")?;
-                service_name = ServiceName::parse(&v)
-                    .map_err(|e| format!("--service-name `{v}`: {e}"))?;
+                service_name =
+                    ServiceName::parse(&v).map_err(|e| format!("--service-name `{v}`: {e}"))?;
             }
             "--pinned" => pinned = true,
             "--help" | "-h" => {
@@ -159,5 +158,7 @@ fn print_help() {
     eprintln!("  --bind ADDR:PORT           listen address (default: 127.0.0.1:7821)");
     eprintln!("  --discovery-broker URL     register with a Ferridis discovery broker");
     eprintln!("  --service-name NAME        broker registration name (default: ferridis-fs)");
-    eprintln!("  --pinned                   make the broker registration persistent (default: ephemeral)");
+    eprintln!(
+        "  --pinned                   make the broker registration persistent (default: ephemeral)"
+    );
 }

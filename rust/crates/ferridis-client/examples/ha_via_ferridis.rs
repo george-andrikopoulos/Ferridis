@@ -47,7 +47,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let registry = client.registry().lock().await;
         let record = registry.get(&capability).expect("just registered");
-        eprintln!("→ MCP server published {} tool(s):", record.manifest().intents().len());
+        eprintln!(
+            "→ MCP server published {} tool(s):",
+            record.manifest().intents().len()
+        );
         for verb in record.manifest().intents() {
             eprintln!("    - {}", verb.as_str());
         }
@@ -57,7 +60,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Ferridis intent verb `ha-get-state`.
     let intent_str = args.intent.unwrap_or_else(|| "ha-get-state".to_string());
     let intent = IntentVerb::parse(&intent_str)?;
-    eprintln!("→ dispatching intent `{intent_str}` with entity_id={}", args.entity);
+    eprintln!(
+        "→ dispatching intent `{intent_str}` with entity_id={}",
+        args.entity
+    );
 
     let body = serde_json::json!({ "entity_id": args.entity });
     let result = client.dispatch(&capability, intent, body).await?;
@@ -85,7 +91,9 @@ fn parse_args() -> Result<Args, Box<dyn std::error::Error>> {
             "--entity" => entity = argv.next(),
             "--intent" => intent = argv.next(),
             "--help" | "-h" => {
-                eprintln!("Usage: ha_via_ferridis --sse-url <url> --entity <entity_id> [--intent <verb>]");
+                eprintln!(
+                    "Usage: ha_via_ferridis --sse-url <url> --entity <entity_id> [--intent <verb>]"
+                );
                 eprintln!("  --intent defaults to ha-get-state");
                 std::process::exit(0);
             }

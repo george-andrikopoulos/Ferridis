@@ -19,15 +19,16 @@ use crate::error::ProtocolError;
 /// The response body is run through [`Manifest::parse`] so that every
 /// caller receives an already-validated value.
 pub async fn fetch_manifest(client: &Client, url: &Url) -> Result<Manifest, ProtocolError> {
-    let resp = client
-        .http()
-        .get(url.clone())
-        .send()
-        .await
-        .map_err(|e| ProtocolError::Transport {
-            url: url.clone(),
-            source: e,
-        })?;
+    let resp =
+        client
+            .http()
+            .get(url.clone())
+            .send()
+            .await
+            .map_err(|e| ProtocolError::Transport {
+                url: url.clone(),
+                source: e,
+            })?;
 
     let status = resp.status();
     let body = resp.text().await.map_err(|e| ProtocolError::Transport {
@@ -82,7 +83,9 @@ mod tests {
         let server = MockServer::start().await;
         Mock::given(method("GET"))
             .and(path("/manifest.json"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(VALID_MANIFEST, "application/json"))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_raw(VALID_MANIFEST, "application/json"),
+            )
             .mount(&server)
             .await;
 

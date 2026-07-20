@@ -420,9 +420,7 @@ impl RawManifest {
                 .category
                 .ok_or(FerridisError::MissingField("category"))?,
         )?;
-        let summary = Summary::parse(
-            &self.summary.ok_or(FerridisError::MissingField("summary"))?,
-        )?;
+        let summary = Summary::parse(&self.summary.ok_or(FerridisError::MissingField("summary"))?)?;
 
         let intents_raw = self.intents.ok_or(FerridisError::MissingField("intents"))?;
         if intents_raw.is_empty() {
@@ -433,11 +431,8 @@ impl RawManifest {
         let mut intents = BTreeSet::new();
         let mut intent_metadata: BTreeMap<IntentVerb, IntentMetadata> = BTreeMap::new();
         for raw in &intents_raw {
-            let (verb_str, kind, chunk_schema_url_raw): (
-                &str,
-                IntentKind,
-                Option<&str>,
-            ) = match raw {
+            let (verb_str, kind, chunk_schema_url_raw): (&str, IntentKind, Option<&str>) = match raw
+            {
                 RawIntentEntry::Flat(s) => (s.as_str(), IntentKind::default(), None),
                 RawIntentEntry::Structured {
                     verb,
@@ -502,7 +497,11 @@ impl RawManifest {
         let mut event_channels = Vec::with_capacity(self.event_channels.len());
         let mut seen_channel_names = BTreeSet::new();
         for raw in self.event_channels {
-            let channel = EventChannel::parse(raw.name.clone(), raw.chunk_schema_url.as_deref(), raw.transport)?; // clone: name is owned by raw which is consumed immediately after
+            let channel = EventChannel::parse(
+                raw.name.clone(),
+                raw.chunk_schema_url.as_deref(),
+                raw.transport,
+            )?; // clone: name is owned by raw which is consumed immediately after
             if !seen_channel_names.insert(channel.name.clone()) {
                 return Err(FerridisError::InvalidManifest(format!(
                     "duplicate event channel name: {}",
@@ -750,7 +749,12 @@ mod tests {
 
     #[test]
     fn event_channel_parse_validates_name_and_url() {
-        let ch = EventChannel::parse("good-channel", Some("https://x/s.json"), ChannelTransport::Sse).unwrap(); // allow:unwrap
+        let ch = EventChannel::parse(
+            "good-channel",
+            Some("https://x/s.json"),
+            ChannelTransport::Sse,
+        )
+        .unwrap(); // allow:unwrap
         assert_eq!(ch.name, "good-channel");
         assert!(EventChannel::parse("Bad_Name", None, ChannelTransport::Sse).is_err());
         assert!(EventChannel::parse("ok", Some("not-a-url"), ChannelTransport::Sse).is_err());

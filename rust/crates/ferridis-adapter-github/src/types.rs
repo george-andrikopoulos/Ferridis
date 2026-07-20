@@ -175,7 +175,10 @@ mod tests {
 
     #[test]
     fn token_parse_rejects_empty() {
-        assert!(matches!(GitHubToken::parse(""), Err(GitHubError::EmptyToken)));
+        assert!(matches!(
+            GitHubToken::parse(""),
+            Err(GitHubError::EmptyToken)
+        ));
     }
 
     #[test]
@@ -206,7 +209,10 @@ mod tests {
 
     #[test]
     fn repo_name_parse_rejects_empty() {
-        assert!(matches!(RepoName::parse(""), Err(GitHubError::EmptyRepoName)));
+        assert!(matches!(
+            RepoName::parse(""),
+            Err(GitHubError::EmptyRepoName)
+        ));
     }
 
     #[test]

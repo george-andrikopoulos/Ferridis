@@ -191,9 +191,13 @@ pub struct GoogleCalendarCapability {
 impl GoogleCalendarCapability {
     /// Build a capability from an access token.
     pub fn new(token: AccessToken) -> Result<Self, DispatchError> {
-        let manifest = Manifest::parse(DEFAULT_MANIFEST_JSON)
-            .map_err(|e| DispatchError::Internal(format!("default manifest failed to parse: {e}")))?;
-        Ok(Self { manifest, client: GoogleCalendarClient::new(token) })
+        let manifest = Manifest::parse(DEFAULT_MANIFEST_JSON).map_err(|e| {
+            DispatchError::Internal(format!("default manifest failed to parse: {e}"))
+        })?;
+        Ok(Self {
+            manifest,
+            client: GoogleCalendarClient::new(token),
+        })
     }
 
     /// Attach OAuth 2.0 refresh credentials for automatic token renewal.
@@ -232,11 +236,7 @@ impl Capability for GoogleCalendarCapability {
         }
     }
 
-    async fn dispatch(
-        &self,
-        intent: &IntentVerb,
-        body: Value,
-    ) -> Result<Value, DispatchError> {
+    async fn dispatch(&self, intent: &IntentVerb, body: Value) -> Result<Value, DispatchError> {
         match intent.as_str() {
             "list-calendars" => self.client.list_calendars().await.map_err(to_dispatch),
 
@@ -263,13 +263,19 @@ impl Capability for GoogleCalendarCapability {
             "get-event" => {
                 let cal_id = extract_str(&body, "calendar_id")?;
                 let event_id = extract_str(&body, "event_id")?;
-                self.client.get_event(cal_id, event_id).await.map_err(to_dispatch)
+                self.client
+                    .get_event(cal_id, event_id)
+                    .await
+                    .map_err(to_dispatch)
             }
 
             "create-event" => {
                 let cal_id = extract_str(&body, "calendar_id")?.to_owned();
                 let event_body = strip_routing_fields(body);
-                self.client.create_event(&cal_id, &event_body).await.map_err(to_dispatch)
+                self.client
+                    .create_event(&cal_id, &event_body)
+                    .await
+                    .map_err(to_dispatch)
             }
 
             "update-event" => {
@@ -285,7 +291,10 @@ impl Capability for GoogleCalendarCapability {
             "delete-event" => {
                 let cal_id = extract_str(&body, "calendar_id")?.to_owned();
                 let event_id = extract_str(&body, "event_id")?.to_owned();
-                self.client.delete_event(&cal_id, &event_id).await.map_err(to_dispatch)?;
+                self.client
+                    .delete_event(&cal_id, &event_id)
+                    .await
+                    .map_err(to_dispatch)?;
                 Ok(serde_json::json!({ "deleted": true }))
             }
 
@@ -316,12 +325,14 @@ fn strip_routing_fields(mut body: Value) -> Value {
 
 fn to_dispatch(e: GoogleCalendarError) -> DispatchError {
     match e {
-        GoogleCalendarError::ApiError { status: 403, message } => {
-            DispatchError::Forbidden(message)
-        }
-        GoogleCalendarError::ApiError { status: 404, message } => {
-            DispatchError::NotFound(message)
-        }
+        GoogleCalendarError::ApiError {
+            status: 403,
+            message,
+        } => DispatchError::Forbidden(message),
+        GoogleCalendarError::ApiError {
+            status: 404,
+            message,
+        } => DispatchError::NotFound(message),
         GoogleCalendarError::TokenExpired => {
             DispatchError::Forbidden("access token expired".into())
         }

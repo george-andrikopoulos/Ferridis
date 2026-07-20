@@ -149,11 +149,7 @@ async fn handle_mcp(
     match parsed {
         Ok(msg) if !msg.is_valid() => {
             let id = msg.id.clone().unwrap_or(Value::Null);
-            let resp = Response::error(
-                id,
-                codes::INVALID_REQUEST,
-                "jsonrpc field must be \"2.0\"",
-            );
+            let resp = Response::error(id, codes::INVALID_REQUEST, "jsonrpc field must be \"2.0\"");
             Json(resp).into_response()
         }
         Ok(msg) if msg.is_notification() => {
@@ -167,11 +163,8 @@ async fn handle_mcp(
             Json(response).into_response()
         }
         Err(e) => {
-            let resp = Response::error(
-                Value::Null,
-                codes::PARSE_ERROR,
-                format!("parse error: {e}"),
-            );
+            let resp =
+                Response::error(Value::Null, codes::PARSE_ERROR, format!("parse error: {e}"));
             Json(resp).into_response()
         }
     }
@@ -294,7 +287,10 @@ fn oauth_html_error(detail: String) -> HttpResponse {
     // vector through reflected error details.
     (
         StatusCode::BAD_REQUEST,
-        [(axum::http::header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+        [(
+            axum::http::header::CONTENT_TYPE,
+            "text/plain; charset=utf-8",
+        )],
         format!("OAuth error: {detail}"),
     )
         .into_response()
@@ -309,7 +305,9 @@ fn oauth_html_error(detail: String) -> HttpResponse {
 async fn log_unknown_route(req: Request) -> HttpResponse {
     let method = req.method().clone();
     let path = req.uri().path().to_string();
-    let has_auth = req.headers().contains_key(axum::http::header::AUTHORIZATION);
+    let has_auth = req
+        .headers()
+        .contains_key(axum::http::header::AUTHORIZATION);
     let ua = req
         .headers()
         .get(axum::http::header::USER_AGENT)
@@ -326,9 +324,7 @@ async fn log_unknown_route(req: Request) -> HttpResponse {
     (
         StatusCode::NOT_FOUND,
         [(axum::http::header::CONTENT_TYPE, "application/json")],
-        format!(
-            r#"{{"error":"not_found","detail":"no handler for {method} {path}"}}"#
-        ),
+        format!(r#"{{"error":"not_found","detail":"no handler for {method} {path}"}}"#),
     )
         .into_response()
 }
@@ -419,15 +415,14 @@ mod tests {
         use base64::Engine;
         use sha2::{Digest, Sha256};
 
-        let oauth =
-            Arc::new(OAuthServer::new(url::Url::parse("https://example.invalid/").unwrap()));
+        let oauth = Arc::new(OAuthServer::new(
+            url::Url::parse("https://example.invalid/").unwrap(),
+        ));
 
         // Drive the OAuth dance manually to get a live access token.
-        let verifier: String = (0..64)
-            .map(|i| char::from(b'a' + (i % 26) as u8))
-            .collect();
-        let challenge =
-            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
+        let verifier: String = (0..64).map(|i| char::from(b'a' + (i % 26) as u8)).collect();
+        let challenge = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .encode(Sha256::digest(verifier.as_bytes()));
         let code = oauth
             .start_authorize(AR {
                 response_type: "code".into(),

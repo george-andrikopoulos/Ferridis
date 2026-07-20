@@ -18,9 +18,7 @@ use std::process::Stdio;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use ferridis_adapter_sdk::{
-    AdapterServer, Capability, DispatchError, IntentStream, SchemaSource,
-};
+use ferridis_adapter_sdk::{AdapterServer, Capability, DispatchError, IntentStream, SchemaSource};
 use ferridis_core::{IntentVerb, Manifest};
 use serde_json::{Value, json};
 use tempfile::TempDir;
@@ -56,11 +54,7 @@ impl Capability for Httpy {
             body: "openapi: 3.0.0\n".into(),
         }
     }
-    async fn dispatch(
-        &self,
-        intent: &IntentVerb,
-        _body: Value,
-    ) -> Result<Value, DispatchError> {
+    async fn dispatch(&self, intent: &IntentVerb, _body: Value) -> Result<Value, DispatchError> {
         Err(DispatchError::UnsupportedIntent(intent.clone()))
     }
     async fn dispatch_stream(
@@ -121,11 +115,7 @@ fn write_adapters_config(dir: &TempDir, adapter_addr: SocketAddr) -> std::path::
     path
 }
 
-async fn spawn_publisher(
-    cfg_path: &std::path::Path,
-    bind: SocketAddr,
-    bearer: &str,
-) -> Child {
+async fn spawn_publisher(cfg_path: &std::path::Path, bind: SocketAddr, bearer: &str) -> Child {
     Command::new(binary_path())
         .arg("--adapters-config")
         .arg(cfg_path)

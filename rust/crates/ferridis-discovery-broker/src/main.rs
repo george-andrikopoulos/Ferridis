@@ -62,7 +62,5 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(args.bind)
         .await
         .expect("bind failed"); // allow:unwrap startup — unrecoverable if bind fails
-    axum::serve(listener, app)
-        .await
-        .expect("server error"); // allow:unwrap startup — unrecoverable if serve fails
+    axum::serve(listener, app).await.expect("server error"); // allow:unwrap startup — unrecoverable if serve fails
 }

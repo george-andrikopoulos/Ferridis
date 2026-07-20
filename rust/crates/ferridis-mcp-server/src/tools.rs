@@ -162,7 +162,10 @@ mod tests {
     #[test]
     fn tool_name_munges_dots_and_dashes() {
         let intent = IntentVerb::parse("read-file").unwrap();
-        assert_eq!(tool_name("ferridis.fs.v1", &intent), "ferridis_ferridis_fs_v1_read_file");
+        assert_eq!(
+            tool_name("ferridis.fs.v1", &intent),
+            "ferridis_ferridis_fs_v1_read_file"
+        );
     }
 
     #[test]
@@ -210,10 +213,7 @@ mod tests {
             "auth": { "type": "none" }
         }"#;
         let manifest = Manifest::parse(manifest_json).unwrap();
-        let cap = CapabilityRef::parse(
-            "ferridis://wallet/mcp/linux-health-mcp@v1",
-        )
-        .unwrap();
+        let cap = CapabilityRef::parse("ferridis://wallet/mcp/linux-health-mcp@v1").unwrap();
         let verb = IntentVerb::parse("journal-query").unwrap();
         let upstream_schema = serde_json::json!({
             "type": "object",

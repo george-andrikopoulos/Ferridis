@@ -10,7 +10,7 @@ use std::net::SocketAddr;
 use ferridis_adapter_google_calendar::{AccessToken, GoogleCalendarCapability};
 use ferridis_adapter_sdk::AdapterServer;
 use reqwest::StatusCode;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tokio::net::TcpListener;
 use wiremock::matchers::{header_exists, method, path, path_regex, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};

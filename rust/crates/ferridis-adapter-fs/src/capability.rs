@@ -175,12 +175,17 @@ fn map_io_not_found(e: std::io::Error, label: &str) -> DispatchError {
     }
 }
 
-async fn read_file(root: &Root, body: serde_json::Value) -> Result<serde_json::Value, DispatchError> {
+async fn read_file(
+    root: &Root,
+    body: serde_json::Value,
+) -> Result<serde_json::Value, DispatchError> {
     let arg: PathArg = serde_json::from_value(body)
         .map_err(|e| DispatchError::InvalidRequest(format!("expected {{path}}: {e}")))?;
     let rel = root.resolve(&arg.path).map_err(map_path_error)?;
     let abs = root.join(&rel);
-    let bytes = fs::read(&abs).await.map_err(|e| map_io_not_found(e, &arg.path))?;
+    let bytes = fs::read(&abs)
+        .await
+        .map_err(|e| map_io_not_found(e, &arg.path))?;
     let content = String::from_utf8(bytes.clone())
         .map_err(|e| DispatchError::InvalidRequest(format!("file is not UTF-8: {e}")))?;
     Ok(serde_json::to_value(FileContent {
@@ -190,10 +195,12 @@ async fn read_file(root: &Root, body: serde_json::Value) -> Result<serde_json::V
     })?)
 }
 
-async fn write_file(root: &Root, body: serde_json::Value) -> Result<serde_json::Value, DispatchError> {
-    let arg: WriteArg = serde_json::from_value(body).map_err(|e| {
-        DispatchError::InvalidRequest(format!("expected {{path, content}}: {e}"))
-    })?;
+async fn write_file(
+    root: &Root,
+    body: serde_json::Value,
+) -> Result<serde_json::Value, DispatchError> {
+    let arg: WriteArg = serde_json::from_value(body)
+        .map_err(|e| DispatchError::InvalidRequest(format!("expected {{path, content}}: {e}")))?;
     let rel = root.resolve(&arg.path).map_err(map_path_error)?;
     let abs = root.join(&rel);
     if let Some(parent) = abs.parent() {
@@ -207,7 +214,10 @@ async fn write_file(root: &Root, body: serde_json::Value) -> Result<serde_json::
     Ok(serde_json::to_value(OkResponse { ok: true })?)
 }
 
-async fn list_dir(root: &Root, body: serde_json::Value) -> Result<serde_json::Value, DispatchError> {
+async fn list_dir(
+    root: &Root,
+    body: serde_json::Value,
+) -> Result<serde_json::Value, DispatchError> {
     let arg: PathArg = serde_json::from_value(body)
         .map_err(|e| DispatchError::InvalidRequest(format!("expected {{path}}: {e}")))?;
     let rel = root.resolve(&arg.path).map_err(map_path_error)?;
@@ -222,12 +232,7 @@ async fn list_dir(root: &Root, body: serde_json::Value) -> Result<serde_json::Va
         .map_err(|e| DispatchError::Internal(format!("read_dir: {e}")))?
     {
         let name = entry.file_name().to_string_lossy().into_owned();
-        let kind = if entry
-            .file_type()
-            .await
-            .map(|t| t.is_dir())
-            .unwrap_or(false)
-        {
+        let kind = if entry.file_type().await.map(|t| t.is_dir()).unwrap_or(false) {
             "dir"
         } else {
             "file"
@@ -283,7 +288,10 @@ fn walk(
     Ok(())
 }
 
-async fn move_file(root: &Root, body: serde_json::Value) -> Result<serde_json::Value, DispatchError> {
+async fn move_file(
+    root: &Root,
+    body: serde_json::Value,
+) -> Result<serde_json::Value, DispatchError> {
     let arg: MoveArg = serde_json::from_value(body)
         .map_err(|e| DispatchError::InvalidRequest(format!("expected {{from, to}}: {e}")))?;
     let from_rel = root.resolve(&arg.from).map_err(map_path_error)?;
@@ -300,4 +308,3 @@ async fn move_file(root: &Root, body: serde_json::Value) -> Result<serde_json::V
         .map_err(|e| map_io_not_found(e, &arg.from))?;
     Ok(serde_json::to_value(OkResponse { ok: true })?)
 }
-

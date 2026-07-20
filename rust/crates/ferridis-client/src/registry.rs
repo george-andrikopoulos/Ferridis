@@ -11,9 +11,9 @@
 //! shaped so the org/public tiers can be added without disturbing
 //! call sites.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use time::{Duration as TimeDuration, OffsetDateTime};
 use url::Url;
 
@@ -38,7 +38,9 @@ use crate::mcp::McpClient;
 /// The variant order matters: `derive(Ord)` makes Personal < Org <
 /// Public, which is exactly the comparator the candidate sort relies
 /// on. Do not reorder.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Default,
+)]
 pub enum RegistryTier {
     /// The host's own registrations. Highest priority.
     #[default]
@@ -189,11 +191,7 @@ impl CapabilityRecord {
     /// Build a Native-backed record (Ferridis adapter). The fetched-at
     /// timestamp is set to `now`.
     pub fn new(capability: CapabilityRef, manifest: Manifest, base_url: Url) -> Self {
-        Self::with_backend(
-            capability,
-            manifest,
-            CapabilityBackend::Native { base_url },
-        )
+        Self::with_backend(capability, manifest, CapabilityBackend::Native { base_url })
     }
 
     /// Build a record with an explicit backend (Native or Mcp).
@@ -228,10 +226,7 @@ impl CapabilityRecord {
     /// cloning. Pass an empty map to mean "no schemas" — that becomes
     /// `None` so accessors can short-circuit.
     #[must_use]
-    pub fn with_input_schemas(
-        mut self,
-        schemas: HashMap<IntentVerb, serde_json::Value>,
-    ) -> Self {
+    pub fn with_input_schemas(mut self, schemas: HashMap<IntentVerb, serde_json::Value>) -> Self {
         if !schemas.is_empty() {
             self.input_schemas = Some(Arc::new(schemas));
         }
@@ -255,9 +250,7 @@ impl CapabilityRecord {
 
     /// Per-intent input schemas if the upstream source advertised them.
     /// Native-backed records return `None`.
-    pub fn input_schemas(
-        &self,
-    ) -> Option<&Arc<HashMap<IntentVerb, serde_json::Value>>> {
+    pub fn input_schemas(&self) -> Option<&Arc<HashMap<IntentVerb, serde_json::Value>>> {
         self.input_schemas.as_ref()
     }
 
@@ -533,7 +526,10 @@ mod tests {
         let mut r = Registry::new();
         let cap = CapabilityRef::parse("ferridis://public.ferridis.io/x/y@v1").unwrap();
         let err = r.set_tier(&cap, RegistryTier::Public).unwrap_err();
-        assert!(matches!(err, crate::ClientError::CapabilityNotRegistered(_)));
+        assert!(matches!(
+            err,
+            crate::ClientError::CapabilityNotRegistered(_)
+        ));
     }
 
     /// Three records each declaring `read-file`, registered in

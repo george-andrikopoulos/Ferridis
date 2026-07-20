@@ -38,7 +38,13 @@ async fn fetches_a_well_formed_manifest() {
         .expect("the adapter's manifest must round-trip through the core validator");
     assert_eq!(manifest.id(), "ferridis.fs.v1");
     let intent_strs: Vec<&str> = manifest.intents().iter().map(|i| i.as_str()).collect();
-    for expected in ["read-file", "write-file", "list-dir", "search-files", "move-file"] {
+    for expected in [
+        "read-file",
+        "write-file",
+        "list-dir",
+        "search-files",
+        "move-file",
+    ] {
         assert!(
             intent_strs.contains(&expected),
             "missing intent: {expected}"

@@ -245,12 +245,13 @@ pub async fn connect_ws(url: &Url, bearer: Option<&str>) -> Result<WsConnection,
         req.headers_mut().insert("Authorization", value);
     }
 
-    let (ws_stream, _response) = tokio_tungstenite::connect_async(req).await.map_err(|e| {
-        ProtocolError::WebSocket {
-            url: url.clone(),
-            detail: format!("handshake: {e}"),
-        }
-    })?;
+    let (ws_stream, _response) =
+        tokio_tungstenite::connect_async(req)
+            .await
+            .map_err(|e| ProtocolError::WebSocket {
+                url: url.clone(),
+                detail: format!("handshake: {e}"),
+            })?;
 
     let (tx, rx) = ws_stream.split();
     Ok(WsConnection {
