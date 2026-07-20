@@ -61,13 +61,13 @@ use sigstore::cosign::bundle::SignedArtifactBundle;
 use sigstore::crypto::{CosignVerificationKey, Signature};
 use sigstore::trust::TrustRoot as SigstoreTrustRootTrait;
 use sigstore::trust::sigstore::SigstoreTrustRoot;
+use webpki::{BorrowedCertRevocationList, CertRevocationList as WebpkiCrl};
 use x509_cert::Certificate;
-use x509_cert::der::{Decode, DecodePem};
 use x509_cert::der::asn1::ObjectIdentifier;
+use x509_cert::der::{Decode, DecodePem};
 use x509_cert::ext::pkix::crl::CrlDistributionPoints;
 use x509_cert::ext::pkix::name::DistributionPointName;
 use x509_cert::ext::pkix::name::GeneralName;
-use webpki::{BorrowedCertRevocationList, CertRevocationList as WebpkiCrl};
 
 /// Errors returned by [`verify_signed_manifest`].
 #[derive(Debug, Error)]
@@ -356,10 +356,7 @@ impl TrustRoot {
         let rekor_pub_path = dir.join("rekor.pub");
         if rekor_pub_path.exists() {
             let pem = std::fs::read_to_string(&rekor_pub_path).map_err(|e| {
-                SigningError::UnusableCertificate(format!(
-                    "read {}: {e}",
-                    rekor_pub_path.display()
-                ))
+                SigningError::UnusableCertificate(format!("read {}: {e}", rekor_pub_path.display()))
             })?;
             let log_id_path = dir.join("rekor.log_id");
             let log_id = if log_id_path.exists() {
@@ -630,7 +627,6 @@ pub fn verify_signed_manifest_with_trust_root<'a>(
     Ok(verified)
 }
 
-
 /// Extract the first CRL Distribution Point URL from a PEM-encoded
 /// X.509 certificate. Returns `Ok(None)` when the cert has no CDP
 /// extension or is a bare SPKI PEM (no `BEGIN CERTIFICATE` marker).
@@ -641,9 +637,8 @@ pub fn extract_cdp_url(cert_pem: &str) -> Result<Option<url::Url>, SigningError>
     if !cert_pem.contains("BEGIN CERTIFICATE") {
         return Ok(None);
     }
-    let cert = Certificate::from_pem(cert_pem.as_bytes()).map_err(|e| {
-        SigningError::UnusableCertificate(format!("X.509 PEM parse failed: {e}"))
-    })?;
+    let cert = Certificate::from_pem(cert_pem.as_bytes())
+        .map_err(|e| SigningError::UnusableCertificate(format!("X.509 PEM parse failed: {e}")))?;
     let extensions = match cert.tbs_certificate.extensions.as_deref() {
         Some(e) => e,
         None => return Ok(None),
@@ -660,12 +655,11 @@ pub fn extract_cdp_url(cert_pem: &str) -> Result<Option<url::Url>, SigningError>
             if let Some(DistributionPointName::FullName(names)) = &dp.distribution_point {
                 for name in names {
                     if let GeneralName::UniformResourceIdentifier(uri) = name {
-                        let parsed =
-                            url::Url::parse(uri.as_str()).map_err(|e| {
-                                SigningError::UnusableCertificate(format!(
-                                    "CDP URI is not a valid URL ({uri}): {e}"
-                                ))
-                            })?;
+                        let parsed = url::Url::parse(uri.as_str()).map_err(|e| {
+                            SigningError::UnusableCertificate(format!(
+                                "CDP URI is not a valid URL ({uri}): {e}"
+                            ))
+                        })?;
                         return Ok(Some(parsed));
                     }
                 }
@@ -706,17 +700,15 @@ pub(crate) fn check_cert_not_revoked(
     crl: &CrlData,
     crl_url: &url::Url,
 ) -> Result<(), SigningError> {
-    let cert = Certificate::from_pem(cert_pem.as_bytes()).map_err(|e| {
-        SigningError::UnusableCertificate(format!("X.509 PEM parse failed: {e}"))
-    })?;
+    let cert = Certificate::from_pem(cert_pem.as_bytes())
+        .map_err(|e| SigningError::UnusableCertificate(format!("X.509 PEM parse failed: {e}")))?;
     let serial = cert.tbs_certificate.serial_number.as_bytes().to_vec();
 
-    let borrowed = BorrowedCertRevocationList::from_der(&crl.0).map_err(|e| {
-        SigningError::CrlFetchFailed {
+    let borrowed =
+        BorrowedCertRevocationList::from_der(&crl.0).map_err(|e| SigningError::CrlFetchFailed {
             url: crl_url.to_string(),
             detail: format!("CRL DER parse failed: {e:?}"),
-        }
-    })?;
+        })?;
     let parsed: WebpkiCrl<'_> = borrowed.into();
 
     match parsed.find_serial(&serial) {
@@ -748,8 +740,7 @@ pub async fn verify_signed_manifest_with_revocation<'a>(
     trust_root: &TrustRoot,
     now: OffsetDateTime,
 ) -> Result<VerifiedManifest<'a>, SigningError> {
-    let verified =
-        verify_signed_manifest_with_trust_root(manifest_bytes, bundle, trust_root, now)?;
+    let verified = verify_signed_manifest_with_trust_root(manifest_bytes, bundle, trust_root, now)?;
 
     if trust_root.revocation_mode == RevocationMode::Skip {
         tracing::debug!("revocation check skipped (RevocationMode::Skip)");
@@ -862,10 +853,9 @@ fn verify_fulcio_chain(
         webpki::ring::RSA_PKCS1_2048_8192_SHA512,
         webpki::ring::ED25519,
     ];
-    let unix_now =
-        pki_types::UnixTime::since_unix_epoch(std::time::Duration::from_secs(
-            now.unix_timestamp() as u64,
-        ));
+    let unix_now = pki_types::UnixTime::since_unix_epoch(std::time::Duration::from_secs(
+        now.unix_timestamp() as u64,
+    ));
     end_entity
         .verify_for_usage(
             supported_algs,
@@ -958,9 +948,7 @@ fn pem_to_der(pem: &str) -> Result<Vec<u8>, SigningError> {
     }
     base64::engine::general_purpose::STANDARD
         .decode(b64.as_bytes())
-        .map_err(|e| {
-            SigningError::UnusableCertificate(format!("PEM base64 decode failed: {e}"))
-        })
+        .map_err(|e| SigningError::UnusableCertificate(format!("PEM base64 decode failed: {e}")))
 }
 
 /// JSON shape that mirrors `SignedArtifactBundle`'s on-the-wire
@@ -1035,9 +1023,8 @@ fn check_cert_validity_window(cert_pem: &str, now: OffsetDateTime) -> Result<(),
     if !cert_pem.contains("BEGIN CERTIFICATE") {
         return Ok(());
     }
-    let cert = Certificate::from_pem(cert_pem.as_bytes()).map_err(|e| {
-        SigningError::UnusableCertificate(format!("X.509 PEM parse failed: {e}"))
-    })?;
+    let cert = Certificate::from_pem(cert_pem.as_bytes())
+        .map_err(|e| SigningError::UnusableCertificate(format!("X.509 PEM parse failed: {e}")))?;
     let not_before = cert
         .tbs_certificate
         .validity
@@ -1068,9 +1055,9 @@ fn check_cert_validity_window(cert_pem: &str, now: OffsetDateTime) -> Result<(),
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base64::Engine;
     use sigstore::cosign::bundle::{Bundle, Payload, SignedArtifactBundle};
     use sigstore::crypto::signing_key::ecdsa::{ECDSAKeys, EllipticCurve};
-    use base64::Engine;
 
     /// Build a real cosign bundle that signs `payload` with a
     /// freshly-generated keypair, wrap its cert as PEM, and return
@@ -1085,11 +1072,8 @@ mod tests {
         let to_sign = keys
             .to_sigstore_signer()
             .expect("ecdsa signer must be available");
-        let signature_bytes = to_sign
-            .sign(payload)
-            .expect("signing must succeed");
-        let b64_sig =
-            base64::engine::general_purpose::STANDARD.encode(&signature_bytes);
+        let signature_bytes = to_sign.sign(payload).expect("signing must succeed");
+        let b64_sig = base64::engine::general_purpose::STANDARD.encode(&signature_bytes);
 
         // 2. Phase 1 doesn't check the chain, so the embedded "cert"
         // is just the bare SPKI PEM. Phase 2 will require a real X.509
@@ -1122,8 +1106,8 @@ mod tests {
         let manifest = br#"{"ferridis_version":"0.1","id":"test.signing.v1"}"#;
         let (payload, bundle_json) = fresh_bundle(manifest);
         let bundle = CosignBundle::parse(&bundle_json).expect("bundle parses");
-        let verified = verify_signed_manifest(&payload, &bundle)
-            .expect("freshly-signed payload must verify");
+        let verified =
+            verify_signed_manifest(&payload, &bundle).expect("freshly-signed payload must verify");
         assert_eq!(verified.bytes(), &payload[..]);
     }
 
@@ -1248,8 +1232,7 @@ mod tests {
         let manifest_pubkey_pem = manifest_keys.as_inner().public_key_to_pem().unwrap();
 
         let trusted_rekor = ECDSAKeys::new(EllipticCurve::P256).unwrap();
-        let trusted_rekor_pubkey_pem =
-            trusted_rekor.as_inner().public_key_to_pem().unwrap();
+        let trusted_rekor_pubkey_pem = trusted_rekor.as_inner().public_key_to_pem().unwrap();
 
         let imposter_rekor = ECDSAKeys::new(EllipticCurve::P256).unwrap();
         let imposter_signer = imposter_rekor.to_sigstore_signer().unwrap();
@@ -1288,9 +1271,9 @@ mod tests {
         .unwrap_err();
         match err {
             SigningError::RekorInclusionFailed(_) => {}
-            other => panic!(
-                "imposter Rekor signature must fail RekorInclusionFailed, got {other:?}"
-            ),
+            other => {
+                panic!("imposter Rekor signature must fail RekorInclusionFailed, got {other:?}")
+            }
         }
     }
 
@@ -1299,9 +1282,7 @@ mod tests {
     /// the leaf PEM (to drop into the bundle's `cert` field), and
     /// the leaf's KeyPair so the caller can sign the manifest with
     /// the matching private key.
-    fn generate_test_chain(
-        leaf_subject: &str,
-    ) -> (Vec<u8>, String, rcgen::KeyPair) {
+    fn generate_test_chain(leaf_subject: &str) -> (Vec<u8>, String, rcgen::KeyPair) {
         use rcgen::{
             CertificateParams, DistinguishedName, ExtendedKeyUsagePurpose, IsCa, KeyPair,
             KeyUsagePurpose,
@@ -1359,16 +1340,12 @@ mod tests {
         // signs the Rekor side). Both libraries default to ECDSA P-256
         // SHA-256 ASN.1, matching cosign's wire format.
         let leaf_pem_pkcs8 = leaf_key.serialize_pem();
-        let leaf_signer_keys = sigstore::crypto::signing_key::ecdsa::ECDSAKeys::from_pem(
-            leaf_pem_pkcs8.as_bytes(),
-        )
-        .expect("rcgen-emitted PKCS#8 PEM loads back into sigstore ECDSAKeys");
-        let leaf_signer = leaf_signer_keys
-            .to_sigstore_signer()
-            .expect("leaf signer");
+        let leaf_signer_keys =
+            sigstore::crypto::signing_key::ecdsa::ECDSAKeys::from_pem(leaf_pem_pkcs8.as_bytes())
+                .expect("rcgen-emitted PKCS#8 PEM loads back into sigstore ECDSAKeys");
+        let leaf_signer = leaf_signer_keys.to_sigstore_signer().expect("leaf signer");
         let sig_bytes = leaf_signer.sign(manifest).expect("leaf signs manifest");
-        let manifest_sig_b64 =
-            base64::engine::general_purpose::STANDARD.encode(&sig_bytes);
+        let manifest_sig_b64 = base64::engine::general_purpose::STANDARD.encode(&sig_bytes);
 
         // Rekor signs the canonical JSON of the payload.
         let payload = Payload {
@@ -1467,9 +1444,7 @@ mod tests {
             OffsetDateTime::now_utc(),
         ) {
             Err(SigningError::TrustRootMissingRekorKeys) => {}
-            other => panic!(
-                "empty trust root must fail TrustRootMissingRekorKeys, got {other:?}"
-            ),
+            other => panic!("empty trust root must fail TrustRootMissingRekorKeys, got {other:?}"),
         }
     }
 
@@ -1544,8 +1519,8 @@ mod tests {
         fs::write(dir.path().join("rekor.pub"), rekor_pem).unwrap();
         fs::write(dir.path().join("rekor.log_id"), "rekor.test-loader\n").unwrap();
 
-        let trust_root = TrustRoot::from_sigstore_dir(dir.path())
-            .expect("sigstore dir loads cleanly");
+        let trust_root =
+            TrustRoot::from_sigstore_dir(dir.path()).expect("sigstore dir loads cleanly");
         assert!(trust_root.has_fulcio_certs());
         assert!(trust_root.has_rekor_keys());
         // Intermediate file absent → only one anchor.
@@ -1710,8 +1685,7 @@ mod tests {
         revoked_serial: Option<rcgen::SerialNumber>,
     ) -> Vec<u8> {
         use rcgen::{
-            CertificateRevocationListParams, RevokedCertParams,
-            RevocationReason, KeyIdMethod,
+            CertificateRevocationListParams, KeyIdMethod, RevocationReason, RevokedCertParams,
         };
         use time::OffsetDateTime;
         let now = OffsetDateTime::now_utc();
@@ -1737,10 +1711,10 @@ mod tests {
 
     #[test]
     fn cert_not_in_crl_passes_revocation_check() {
-        use x509_cert::der::DecodePem as _;
-
         // Generate CA + two leaves: only leaf_b is revoked.
-        use rcgen::{CertificateParams, IsCa, KeyPair, BasicConstraints, DnType, DistinguishedName};
+        use rcgen::{
+            BasicConstraints, CertificateParams, DistinguishedName, DnType, IsCa, KeyPair,
+        };
         let ca_key = KeyPair::generate().unwrap();
         let mut ca_params = CertificateParams::new(vec![]).unwrap();
         ca_params.distinguished_name = {
@@ -1761,7 +1735,9 @@ mod tests {
             dn.push(DnType::CommonName, "leaf-a");
             dn
         };
-        let leaf_a_cert = leaf_a_params.signed_by(&leaf_a_key, &ca_cert, &ca_key).unwrap();
+        let leaf_a_cert = leaf_a_params
+            .signed_by(&leaf_a_key, &ca_cert, &ca_key)
+            .unwrap();
         let leaf_a_pem = leaf_a_cert.pem();
 
         // Leaf B — revoked.
@@ -1774,7 +1750,9 @@ mod tests {
             dn.push(DnType::CommonName, "leaf-b");
             dn
         };
-        let _leaf_b_cert = leaf_b_params.signed_by(&leaf_b_key, &ca_cert, &ca_key).unwrap();
+        let _leaf_b_cert = leaf_b_params
+            .signed_by(&leaf_b_key, &ca_cert, &ca_key)
+            .unwrap();
 
         // CRL revokes only leaf_b.
         let crl_der = make_crl_der(&ca_cert, &ca_key, Some(leaf_b_serial));
@@ -1788,7 +1766,9 @@ mod tests {
 
     #[test]
     fn cert_in_crl_fails_revocation_check() {
-        use rcgen::{CertificateParams, IsCa, KeyPair, BasicConstraints, DnType, DistinguishedName};
+        use rcgen::{
+            BasicConstraints, CertificateParams, DistinguishedName, DnType, IsCa, KeyPair,
+        };
         let ca_key = KeyPair::generate().unwrap();
         let mut ca_params = CertificateParams::new(vec![]).unwrap();
         ca_params.distinguished_name = {
@@ -1831,5 +1811,4 @@ mod tests {
         let root = TrustRoot::new().with_revocation_mode(RevocationMode::Skip);
         assert_eq!(root.revocation_mode, RevocationMode::Skip);
     }
-
 }

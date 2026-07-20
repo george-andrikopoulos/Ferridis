@@ -42,4 +42,5 @@ wiremock = { workspace = true }
 axum = { workspace = true, features = ["ws"] }
 futures-util = { workspace = true }
 olpc-cjson = "0.1"
+proptest = { workspace = true }
 rcgen = "0.13"

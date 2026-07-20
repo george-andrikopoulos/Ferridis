@@ -78,3 +78,35 @@ impl<'de> Deserialize<'de> for RefreshToken {
         String::deserialize(de).map(Self::new)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SECRET: &str = "sk-live-EXTREMELY-SECRET-VALUE-12345";
+
+    #[test]
+    fn access_token_debug_never_leaks_the_secret() {
+        let token = AccessToken::new(SECRET);
+        let rendered = format!("{token:?}");
+        assert!(!rendered.contains(SECRET));
+        assert_eq!(rendered, "AccessToken(***)");
+    }
+
+    #[test]
+    fn refresh_token_debug_never_leaks_the_secret() {
+        let token = RefreshToken::new(SECRET);
+        let rendered = format!("{token:?}");
+        assert!(!rendered.contains(SECRET));
+        assert_eq!(rendered, "RefreshToken(***)");
+    }
+
+    #[test]
+    fn access_token_serde_round_trip_preserves_secret_but_debug_stays_redacted() {
+        let json = serde_json::to_string(&AccessToken::new(SECRET)).expect("serialize token");
+        assert_eq!(json, format!("\"{SECRET}\""));
+        let back: AccessToken = serde_json::from_str(&json).expect("deserialize token");
+        assert_eq!(back.expose(), SECRET);
+        assert!(!format!("{back:?}").contains(SECRET));
+    }
+}

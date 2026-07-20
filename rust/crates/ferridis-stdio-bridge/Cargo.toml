@@ -24,3 +24,8 @@ futures-util = { workspace = true }
 bytes = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+ferridis-protocol = { workspace = true }
+reqwest = { workspace = true }
+url = { workspace = true }

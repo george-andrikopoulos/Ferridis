@@ -181,17 +181,18 @@ Drives the `claude` CLI (Claude Code) as a stream-kind Ferridis capability — t
 
 Every **NOTHING YET — exposed** entry in [FEATURES.md](./FEATURES.md) is a documented behavior with no type or test holding it. Close each gap and update the corresponding ledger row in the same change:
 
-- [ ] `ferridis-stdio-bridge` test suite — the crate ships **zero tests** (hermetic e2e against a stub stdio MCP server, mirroring the claude-cli adapter's pattern)
-- [ ] `EventPublisher` / webhook delivery test against a receiving server (`ferridis-adapter-sdk`)
-- [ ] Token-redaction regression test in `ferridis-core` (assert `Debug`/`Display` never leak the secret)
-- [ ] Client-side `EventChannelNotDeclared` rejection test (undeclared channel on a manifest that declares channels)
-- [ ] SSE reconnect resume-behavior e2e (drop mid-stream → reconnect with `Last-Event-ID` cursor → resume)
-- [ ] Broker self-registration heartbeat e2e (`BrokerRegistration` re-registers within the TTL window; abort-on-drop stops it)
+- [x] `ferridis-stdio-bridge` test suite (2026-07-20) — crate split into lib+bin; 4 unit tests (`types.rs`) + 7 hermetic e2e (`tests/hermetic_bridge.rs`) against a rustc-compiled stub child: handshake, round-trip, arg/env plumbing, 404/400, child-exit session cleanup, spawn-failure 500
+- [x] `EventPublisher` / webhook delivery tests (2026-07-20) — `ferridis-adapter-sdk/tests/webhook_delivery.rs`: real receiving server, BadStatus(500), Transport failure
+- [x] Token-redaction regression tests (2026-07-20) — `ferridis-core/src/token.rs`: Debug never leaks for both tokens; serde round-trip preserves secret while Debug stays redacted
+- [x] Client-side `EventChannelNotDeclared` rejection tests (2026-07-20) — `ferridis-client/tests/subscribe_channel_declaration.rs`, covers `subscribe` and `subscribe_ws`
+- [x] SSE reconnect resume-behavior e2e (2026-07-20) — `ferridis-protocol/tests/sse_resume.rs`: drop mid-feed, reconnect with cursor, no replay / no gap
+- [x] Broker self-registration heartbeat e2e (2026-07-20) — `BrokerConfig::with_heartbeat_interval` added (default 240 s unchanged); `ferridis-adapter-sdk/tests/broker_heartbeat.rs`: re-register within interval, abort-on-drop stops, pinned never heartbeats
 - [ ] Tier-used logging capture test (assert the `tracing::info!` emission on dispatch)
-- [ ] HTTP pool-hardening regression test (or accept as config-constant-only and note it)
+- [x] HTTP pool-hardening — **accepted as config-constant-only** (2026-07-20): reqwest exposes no pool-state readback; constants public with rationale doc-comments
 - [ ] Editor-extension automated tests (VS Code TS extension, Zed WASM extension) — currently manual verification only
-- [ ] Property-based tests (`proptest`) for parser boundaries — `IntentVerb`, `CapabilityRef`, `Manifest`, SSE parser (workspace currently has none; round-trip + rejection laws belong at the property layer)
+- [x] Property-based tests (2026-07-20) — `proptest` added; `ferridis-core/tests/prop_parsers.rs` (8 properties: IntentVerb, CapabilityVersion, CapabilityRef) + `ferridis-protocol/tests/prop_sse.rs` (3 properties: chunk-boundary invariance, field fidelity, CRLF≡LF). A whole-`Manifest`-document generator remains a candidate follow-up.
 - [ ] Wire `BackpressureSignal` / `StreamChunk` into the live streaming path + clean cancellation message for streamed intents (types shipped v0.4, unwired)
+- [x] `mcp_consumer` interop self-test made platform-correct (2026-07-20) — binary located beside the test executable (honors `CARGO_TARGET_DIR`, platform exe suffix); previously hardcoded a Unix `target/release` path and failed on Windows
 
 ## Open design questions
 

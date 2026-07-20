@@ -47,6 +47,10 @@ pub struct SessionId(uuid::Uuid);
 
 impl SessionId {
     /// Generate a fresh random session identifier.
+    ///
+    /// Deliberately no `Default`: a "default" that yields a different
+    /// value on every call would be misleading.
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self(uuid::Uuid::new_v4())
     }
@@ -80,7 +84,11 @@ pub struct SpawnConfig {
 impl SpawnConfig {
     /// Construct with a validated command and no args or extra env.
     pub fn new(command: Command) -> Self {
-        Self { command, args: Vec::new(), env: Vec::new() }
+        Self {
+            command,
+            args: Vec::new(),
+            env: Vec::new(),
+        }
     }
 
     /// Append a command-line argument.
@@ -114,12 +122,22 @@ impl SpawnConfig {
             source: e,
         })?;
 
-        let stdin = child.stdin.take().ok_or(BridgeError::MissingStream { stream: "stdin" })?;
-        let stdout =
-            child.stdout.take().ok_or(BridgeError::MissingStream { stream: "stdout" })?;
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or(BridgeError::MissingStream { stream: "stdin" })?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or(BridgeError::MissingStream { stream: "stdout" })?;
         let stderr = child.stderr.take();
 
-        Ok(SpawnedChild { child, stdin, stdout, stderr })
+        Ok(SpawnedChild {
+            child,
+            stdin,
+            stdout,
+            stderr,
+        })
     }
 }
 
@@ -169,4 +187,41 @@ pub enum BridgeError {
         /// Which stream was missing.
         stream: &'static str,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn command_rejects_empty() {
+        assert!(matches!(Command::new("").unwrap_err(), CommandError::Empty));
+    }
+
+    #[test]
+    fn command_accepts_bare_name_and_path() {
+        assert!(Command::new("npx").is_ok());
+        assert!(Command::new("/usr/local/bin/server").is_ok());
+    }
+
+    #[test]
+    fn session_id_display_round_trips_through_uuid() {
+        let id = SessionId::new();
+        let parsed: uuid::Uuid = id.to_string().parse().expect("Display emits a UUID");
+        assert_eq!(SessionId::from_raw(parsed), id);
+    }
+
+    #[tokio::test]
+    async fn spawn_of_missing_binary_is_a_typed_spawn_error() {
+        let cfg = SpawnConfig::new(
+            Command::new("ferridis-definitely-not-a-real-binary-7826").expect("non-empty"),
+        );
+        match cfg.spawn() {
+            Err(BridgeError::Spawn { command, .. }) => {
+                assert_eq!(command, "ferridis-definitely-not-a-real-binary-7826");
+            }
+            Err(other) => panic!("expected Spawn error, got {other:?}"),
+            Ok(_) => panic!("spawn of a missing binary must fail"),
+        }
+    }
 }

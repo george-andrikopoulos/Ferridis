@@ -31,6 +31,10 @@ impl Drop for SessionHandle {
 
 // ── Session store ──────────────────────────────────────────────────────────
 
+/// Shared map of live sessions, keyed by [`SessionId`].
+///
+/// Each entry owns the child process handle; removing an entry drops the
+/// handle, which sends the kill signal to the child.
 #[derive(Clone, Default)]
 pub struct SessionStore(Arc<Mutex<HashMap<SessionId, SessionHandle>>>);
 
@@ -40,10 +44,7 @@ impl SessionStore {
     }
 
     /// Clone the stdin Arc for a session without holding the store lock.
-    async fn borrow_stdin(
-        &self,
-        id: SessionId,
-    ) -> Option<Arc<Mutex<tokio::process::ChildStdin>>> {
+    async fn borrow_stdin(&self, id: SessionId) -> Option<Arc<Mutex<tokio::process::ChildStdin>>> {
         self.0.lock().await.get(&id).map(|h| Arc::clone(&h.stdin))
     }
 
@@ -54,6 +55,8 @@ impl SessionStore {
 
 // ── App state ─────────────────────────────────────────────────────────────
 
+/// Router state: the session store plus the spawn configuration cloned
+/// for every new SSE session.
 #[derive(Clone)]
 pub struct AppState {
     sessions: SessionStore,
@@ -61,13 +64,19 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// Build fresh state around a validated [`SpawnConfig`].
     pub fn new(spawn_cfg: SpawnConfig) -> Self {
-        Self { sessions: SessionStore::default(), spawn_cfg }
+        Self {
+            sessions: SessionStore::default(),
+            spawn_cfg,
+        }
     }
 }
 
 // ── Router ────────────────────────────────────────────────────────────────
 
+/// Build the bridge's axum router: `GET /sse` (session-per-connection)
+/// and `POST /messages?sessionId=<id>`.
 pub fn build_router(state: AppState) -> Router {
     Router::new()
         .route("/sse", get(get_sse))
@@ -93,7 +102,13 @@ async fn get_sse(
 
     state
         .sessions
-        .insert(session_id, SessionHandle { stdin: Arc::clone(&stdin), _child: child })
+        .insert(
+            session_id,
+            SessionHandle {
+                stdin: Arc::clone(&stdin),
+                _child: child,
+            },
+        )
         .await;
 
     // Stdout reader task: forward child lines to the SSE channel.

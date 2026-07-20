@@ -64,7 +64,10 @@ impl ServiceName {
         if s.is_empty() {
             return Err(ServiceNameError::Empty);
         }
-        if !s.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
+        if !s
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        {
             return Err(ServiceNameError::InvalidChars(s));
         }
         Ok(Self(s))
@@ -97,8 +100,8 @@ impl AdapterUrl {
     /// Infallible: a valid `SocketAddr` always produces a valid `http` URL.
     pub fn from_socket(addr: SocketAddr) -> Self {
         // allow:expect — SocketAddr always formats as a valid URL authority.
-        let url = Url::parse(&format!("http://{addr}/"))
-            .expect("SocketAddr is a valid URL authority");
+        let url =
+            Url::parse(&format!("http://{addr}/")).expect("SocketAddr is a valid URL authority");
         Self(url)
     }
 }
@@ -146,12 +149,15 @@ pub struct BrokerConfig {
     kind: ServiceKind,
     adapter_url: AdapterUrl,
     persistence: RegistrationPersistence,
+    heartbeat_interval: Duration,
 }
 
 impl BrokerConfig {
     /// Construct from validated constituent types.
     ///
     /// Infallible: all invariants are already enforced by the field types.
+    /// The heartbeat interval defaults to 240 s — comfortably inside the
+    /// broker's 300 s TTL.
     pub fn new(
         broker: BrokerUrl,
         name: ServiceName,
@@ -159,7 +165,25 @@ impl BrokerConfig {
         adapter_url: AdapterUrl,
         persistence: RegistrationPersistence,
     ) -> Self {
-        Self { broker, name, kind, adapter_url, persistence }
+        Self {
+            broker,
+            name,
+            kind,
+            adapter_url,
+            persistence,
+            heartbeat_interval: HEARTBEAT_INTERVAL,
+        }
+    }
+
+    /// Builder-style heartbeat-interval override.
+    ///
+    /// Production callers should keep the default — it is tuned against
+    /// the broker's TTL. Exists so tests can exercise the heartbeat loop
+    /// without waiting minutes.
+    #[must_use]
+    pub fn with_heartbeat_interval(mut self, interval: Duration) -> Self {
+        self.heartbeat_interval = interval;
+        self
     }
 }
 
@@ -269,7 +293,9 @@ impl BrokerRegistration {
         } else {
             None
         };
-        Ok(Self { _heartbeat: heartbeat })
+        Ok(Self {
+            _heartbeat: heartbeat,
+        })
     }
 }
 
@@ -285,7 +311,11 @@ impl Drop for BrokerRegistration {
 
 async fn register_once(client: &Client, cfg: &BrokerConfig) -> Result<(), BrokerError> {
     // allow:expect — BrokerUrl is validated; joining a fixed path cannot fail.
-    let url = cfg.broker.0.join("discovery/register").expect("validated BrokerUrl");
+    let url = cfg
+        .broker
+        .0
+        .join("discovery/register")
+        .expect("validated BrokerUrl");
 
     let persistent = match cfg.persistence {
         RegistrationPersistence::Ephemeral => None,
@@ -322,7 +352,7 @@ async fn register_once(client: &Client, cfg: &BrokerConfig) -> Result<(), Broker
 
 fn spawn_heartbeat(client: Client, cfg: BrokerConfig) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        let mut ticker = tokio::time::interval(HEARTBEAT_INTERVAL);
+        let mut ticker = tokio::time::interval(cfg.heartbeat_interval);
         ticker.tick().await; // skip first — initial registration already done
         loop {
             ticker.tick().await;
@@ -402,9 +432,7 @@ mod tests {
 
     #[test]
     fn adapter_url_from_socket_is_http() {
-        let addr: SocketAddr = "127.0.0.1:7821"
-            .parse()
-            .expect("literal addr is valid"); // allow:expect
+        let addr: SocketAddr = "127.0.0.1:7821".parse().expect("literal addr is valid"); // allow:expect
         let u = AdapterUrl::from_socket(addr);
         assert_eq!(u.0.scheme(), "http");
         assert_eq!(u.0.host_str(), Some("127.0.0.1"));

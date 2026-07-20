@@ -25,22 +25,36 @@ const MANIFEST_WITH_CHANNELS: &str = r#"{
 #[test]
 fn channel_transport_defaults_to_sse_when_absent() {
     let m = Manifest::parse(MANIFEST_WITH_CHANNELS).unwrap();
-    let ch = m.event_channels().iter().find(|c| c.name() == "state-changed").unwrap();
+    let ch = m
+        .event_channels()
+        .iter()
+        .find(|c| c.name() == "state-changed")
+        .unwrap();
     assert_eq!(ch.transport(), ChannelTransport::Sse);
 }
 
 #[test]
 fn channel_transport_parses_websocket() {
     let m = Manifest::parse(MANIFEST_WITH_CHANNELS).unwrap();
-    let ch = m.event_channels().iter().find(|c| c.name() == "via-websocket").unwrap();
+    let ch = m
+        .event_channels()
+        .iter()
+        .find(|c| c.name() == "via-websocket")
+        .unwrap();
     assert_eq!(ch.transport(), ChannelTransport::WebSocket);
 }
 
 #[test]
 fn manifest_channel_transport_lookup() {
     let m = Manifest::parse(MANIFEST_WITH_CHANNELS).unwrap();
-    assert_eq!(m.channel_transport("state-changed"), Some(ChannelTransport::Sse));
-    assert_eq!(m.channel_transport("via-websocket"), Some(ChannelTransport::WebSocket));
+    assert_eq!(
+        m.channel_transport("state-changed"),
+        Some(ChannelTransport::Sse)
+    );
+    assert_eq!(
+        m.channel_transport("via-websocket"),
+        Some(ChannelTransport::WebSocket)
+    );
     assert_eq!(m.channel_transport("not-declared"), None);
 }
 

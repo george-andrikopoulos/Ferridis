@@ -16,9 +16,6 @@
 //!     [--pinned]
 //! ```
 
-mod bridge;
-mod types;
-
 use std::net::SocketAddr;
 
 use ferridis_adapter_sdk::broker::{
@@ -27,8 +24,8 @@ use ferridis_adapter_sdk::broker::{
 };
 use tokio::net::TcpListener;
 
-use bridge::AppState;
-use types::{Command, SpawnConfig};
+use ferridis_stdio_bridge::bridge::{self, AppState};
+use ferridis_stdio_bridge::types::{Command, SpawnConfig};
 
 #[tokio::main]
 async fn main() {
@@ -148,14 +145,13 @@ fn parse_args(argv: Vec<String>) -> Result<Args, String> {
             "--discovery-broker" => {
                 let v = it.next().ok_or("--discovery-broker expects a URL")?;
                 discovery_broker = Some(
-                    BrokerUrl::parse(&v)
-                        .map_err(|e| format!("--discovery-broker `{v}`: {e}"))?,
+                    BrokerUrl::parse(&v).map_err(|e| format!("--discovery-broker `{v}`: {e}"))?,
                 );
             }
             "--service-name" => {
                 let v = it.next().ok_or("--service-name expects a name")?;
-                service_name = ServiceName::parse(&v)
-                    .map_err(|e| format!("--service-name `{v}`: {e}"))?;
+                service_name =
+                    ServiceName::parse(&v).map_err(|e| format!("--service-name `{v}`: {e}"))?;
             }
             "--pinned" => pinned = true,
             "--help" | "-h" => {
@@ -188,6 +184,10 @@ fn print_help() {
     eprintln!("  --env KEY=VALUE           environment variable injected into CMD; repeatable");
     eprintln!("  --bind ADDR:PORT          listen address (default: 127.0.0.1:7826)");
     eprintln!("  --discovery-broker URL    register with a Ferridis discovery broker");
-    eprintln!("  --service-name NAME       broker registration name (default: ferridis-stdio-bridge)");
-    eprintln!("  --pinned                  make the broker registration persistent (default: ephemeral)");
+    eprintln!(
+        "  --service-name NAME       broker registration name (default: ferridis-stdio-bridge)"
+    );
+    eprintln!(
+        "  --pinned                  make the broker registration persistent (default: ephemeral)"
+    );
 }

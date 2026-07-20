@@ -41,26 +41,38 @@ async fn spin_fs_adapter(dir: &TempDir) -> SocketAddr {
 }
 
 fn mcp_server_binary() -> std::path::PathBuf {
-    // Cargo sets CARGO_BIN_EXE_<bin_name> for the binaries declared in
-    // the workspace. We want the `ferridis-mcp-server` binary.
-    let raw = option_env!("CARGO_BIN_EXE_ferridis-mcp-server");
-    match raw {
-        Some(p) => std::path::PathBuf::from(p),
-        None => {
-            // Fall back to the release artifact under target/release.
-            let p = std::env::var("CARGO_MANIFEST_DIR")
-                .map(std::path::PathBuf::from)
-                .expect("CARGO_MANIFEST_DIR");
-            // crates/ferridis-client → ../../target/release/ferridis-mcp-server
-            p.parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .join("target")
-                .join("release")
-                .join("ferridis-mcp-server")
+    // `CARGO_BIN_EXE_*` is only set for bins of the crate under test, so
+    // the cross-crate binary must be located by hand. Look in the same
+    // target profile directory as this test executable (which honors
+    // `CARGO_TARGET_DIR` and the platform's exe suffix), then in the
+    // sibling `release` profile, then in the workspace-relative
+    // `target/release` as a last resort.
+    let name = format!("ferridis-mcp-server{}", std::env::consts::EXE_SUFFIX);
+    if let Ok(mut profile_dir) = std::env::current_exe() {
+        profile_dir.pop(); // deps
+        profile_dir.pop(); // debug | release
+        let candidate = profile_dir.join(&name);
+        if candidate.exists() {
+            return candidate;
+        }
+        if let Some(target_root) = profile_dir.parent() {
+            let release = target_root.join("release").join(&name);
+            if release.exists() {
+                return release;
+            }
         }
     }
+    let p = std::env::var("CARGO_MANIFEST_DIR")
+        .map(std::path::PathBuf::from)
+        .expect("CARGO_MANIFEST_DIR");
+    // crates/ferridis-client → ../../target/release/<name>
+    p.parent()
+        .expect("crates dir")
+        .parent()
+        .expect("workspace root")
+        .join("target")
+        .join("release")
+        .join(name)
 }
 
 #[tokio::test]
@@ -79,13 +91,17 @@ async fn consumes_our_own_mcp_server_over_stdio_end_to_end() {
         "manifestUrl": format!("http://{addr}/manifest.json"),
         "baseUrl": format!("http://{addr}/"),
     }]);
-    std::fs::write(&adapters_path, serde_json::to_vec_pretty(&adapters).unwrap()).unwrap();
+    std::fs::write(
+        &adapters_path,
+        serde_json::to_vec_pretty(&adapters).unwrap(),
+    )
+    .unwrap();
 
-    // 3. Pre-condition: the mcp-server release binary must exist.
+    // 3. Pre-condition: the mcp-server binary must exist.
     let binary = mcp_server_binary();
     if !binary.exists() {
         panic!(
-            "test requires the release binary at {} — run `cargo build --release -p ferridis-mcp-server` first",
+            "test requires the ferridis-mcp-server binary (looked at {}) — run `cargo build -p ferridis-mcp-server` first",
             binary.display()
         );
     }
@@ -100,11 +116,7 @@ async fn consumes_our_own_mcp_server_over_stdio_end_to_end() {
     ];
     let env = vec![("FERRIDIS_WALLET_MEMORY".to_string(), "1".to_string())];
     let capability = client
-        .register_mcp_stdio(
-            &binary.to_string_lossy(),
-            &args,
-            &env,
-        )
+        .register_mcp_stdio(&binary.to_string_lossy(), &args, &env)
         .await
         .expect("register MCP server over stdio");
 
