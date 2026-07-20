@@ -73,7 +73,8 @@ The behavior contract: what the protocol does, what's built, and what's coming �
 | ✅ | **`Client::subscribe_ws`** — convenience on top of the WS primitive; `ClientError::WrongTransport` when the channel's declared transport is SSE | `rust/crates/ferridis-client/src/client.rs` | `tests/subscribe_ws_errors.rs`: `wrong_transport_is_a_distinct_error_variant`, `subscribe_ws_unregistered_capability_returns_error` |
 | ✅ | **Adapter-SDK WebSocket handler trait** — `WsHandler` with `WsConnId` + `WsMessage` newtypes | `rust/crates/ferridis-adapter-sdk/src/server.rs` | `tests/ws_handler.rs` (5 tests incl. `ws_handler_is_object_safe`) |
 | ✅ | **SSE auto-reconnect with `Last-Event-ID` cursor** — `ReconnectCursor` + `subscribe_with_cursor` | `rust/crates/ferridis-protocol/src/events.rs` | `tests/reconnect_cursor.rs` (5 cursor-type tests) + `tests/sse_resume.rs` e2e (`reconnect_with_cursor_resumes_after_last_seen_event` — drop mid-feed, reconnect, no replay/no gap; `initial_connection_without_cursor_starts_from_the_beginning`) |
-| ✅ | **Backpressure signal types (v0.4)** — `BackpressureSignal { Continue \| SlowDown \| Halt }` + `StreamChunk` | `rust/crates/ferridis-protocol/` | `tests/backpressure.rs` (5 tests). Not yet wired into the live streaming path — wiring is queued in [TODO.md](./TODO.md) |
+| ✅ | **Backpressure / flow control — wired end-to-end (v0.7)** — adapters override `Capability::dispatch_stream_flow` (default adapts `dispatch_stream`, tagging every chunk `Continue`, so existing adapters are untouched); the SDK emits `event: backpressure {"signal": "slow-down" \| "halt"}` on the SSE wire when the signal *changes*; `Halt` terminates the stream (no trailing `end`, halt-tagged payload never delivered); the client honors halt with typed `ClientError::StreamHalted` and surfaces slow-down via tracing. Pre-v0.7 clients ignore the event per SSE convention. | `rust/crates/ferridis-protocol/src/backpressure.rs`, `ferridis-adapter-sdk/src/{capability,server}.rs`, `ferridis-client/src/client.rs` | e2e `halt_signal_surfaces_as_typed_error_and_terminates` (`ferridis-client/tests/backpressure_flow.rs`) + wire-shape pin `backpressure_events_have_the_documented_wire_shape` (`ferridis-adapter-sdk/tests/stream_cancellation.rs`) + type tests `ferridis-protocol/tests/backpressure.rs` |
+| ✅ | **Stream cancellation propagation (v0.7)** — a consumer dropping the stream closes the connection; the SDK drops the adapter's intent stream, releasing everything it owns (`kill_on_drop` children, cursors, handles) | `rust/crates/ferridis-adapter-sdk/src/server.rs` | e2e `consumer_drop_reaches_the_adapter_stream_drop` (`ferridis-adapter-sdk/tests/stream_cancellation.rs`) — DropFlag inside an infinite producer, observed dropped after consumer cancel |
 
 ## Layer 5 — Intent layer
 
@@ -90,7 +91,7 @@ The behavior contract: what the protocol does, what's built, and what's coming �
 
 | Status | Feature | Where | Enforced by |
 |---|---|---|---|
-| ✅ | Tier-used logging on every dispatch (`tracing::info!` with capability/intent/tier/auth/connection_id) | `rust/crates/ferridis-client/src/client.rs` | **NOTHING YET — exposed** (no log-capture test asserts the emission) |
+| ✅ | Tier-used logging on every dispatch (`tracing::info!` with capability/intent/tier/auth/connection_id) | `rust/crates/ferridis-client/src/client.rs` | `dispatch_emits_tier_used_log_record` (`ferridis-client/tests/tier_logging.rs`) — captures real tracing output through a real dispatch and asserts capability/intent/tier fields |
 | 📋 | Per-service tier override (user-facing policy) | `ferridis-client` | — |
 | 💡 | Browser session driver | future | — |
 | 💡 | Computer-use vision driver | future | — |
@@ -138,6 +139,6 @@ These are the gaps that v0.1 deliberately deferred, now closed:
 ## Still queued
 
 - 📋 CT log validation (CRL revocation shipped v0.6; CT log check is the remaining gap).
-- 📋 Close the **NOTHING YET — exposed** gaps above (mirrored in [TODO.md](./TODO.md)): stdio-bridge test suite, event-publisher/webhook delivery tests, token-redaction regression test, undeclared-event-channel rejection test, SSE reconnect resume-behavior e2e, broker heartbeat e2e, tier-used log-capture test, editor-extension automated tests, pool-hardening regression test.
-- 📋 Property-based tests (`proptest`) for the parser boundaries (`IntentVerb`, `CapabilityRef`, `Manifest`, SSE parser) — the workspace currently has none; round-trip and rejection laws belong at that layer.
+- 📋 Editor-extension automated tests (VS Code TS extension, Zed WASM extension) — the last **NOTHING YET — exposed** entries above; everything else from the 2026-07-20 gap audit is closed (stdio-bridge suite, webhook delivery, token redaction, undeclared-channel rejection, SSE resume e2e, broker heartbeat e2e, tier-used log capture, backpressure wiring, cancellation propagation; pool hardening accepted as config-constant-only).
+- 📋 Property test for whole-`Manifest` documents (a JSON-document generator); the parser-boundary property suites for `IntentVerb` / `CapabilityRef` / SSE shipped 2026-07-20.
 - 💡 Local-capability trust model.

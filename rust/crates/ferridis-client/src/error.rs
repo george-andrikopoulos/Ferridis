@@ -171,6 +171,20 @@ pub enum ClientError {
         requested: ferridis_core::ChannelTransport,
     },
 
+    /// The adapter emitted a `Halt` backpressure signal on a streamed
+    /// intent: it declared itself overwhelmed and terminated the
+    /// stream. Deliberate flow-control stop — distinct from both a
+    /// clean `end` and a transport failure. Retrying later (or with a
+    /// slower consumer) is reasonable; the chunks already received are
+    /// valid.
+    #[error("adapter halted the stream for `{intent}` on `{capability}` (backpressure)")]
+    StreamHalted {
+        /// The capability that halted the stream.
+        capability: CapabilityRef,
+        /// The streamed intent that was halted.
+        intent: IntentVerb,
+    },
+
     /// The MCP server's SSE session expired — typically because the
     /// upstream restarted or recycled its sessions. The remote returns
     /// `404 Not Found` to POSTs against the cached session URL.

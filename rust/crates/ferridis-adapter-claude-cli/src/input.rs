@@ -341,9 +341,14 @@ mod tests {
 
         let allow = AllowedRoots::empty().with_root(root.path()).unwrap();
 
-        // Inside is accepted.
-        let cwd = AllowedCwd::parse(inside.to_str().unwrap(), &allow).unwrap();
-        assert!(cwd.as_path().starts_with(root.path()));
+        // Inside is accepted. Compare against the canonicalized root:
+        // `parse` canonicalizes, and on Windows that produces the
+        // extended-length (`\\?\`) form that the raw TempDir path
+        // doesn't prefix-match.
+        let cwd = AllowedCwd::parse(inside.to_str().expect("utf8 temp path"), &allow)
+            .expect("inside-root cwd must be accepted");
+        let canon_root = root.path().canonicalize().expect("temp root canonicalizes");
+        assert!(cwd.as_path().starts_with(&canon_root));
 
         // Outside is rejected.
         let err = AllowedCwd::parse(outside.path().to_str().unwrap(), &allow).unwrap_err();

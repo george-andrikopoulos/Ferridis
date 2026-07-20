@@ -167,7 +167,6 @@ async fn spawn(cfg: ClaudeCliConfig) -> SocketAddr {
 }
 
 struct StubScript {
-    _dir: tempfile::TempDir,
     path: PathBuf,
 }
 
@@ -177,28 +176,49 @@ impl StubScript {
     }
 }
 
+/// Mimic the first/last events the real `claude --output-format
+/// stream-json --verbose` emits, with two assistant tokens and a final
+/// result. The stub is a tiny Rust binary compiled once per test run
+/// with `rustc` — no shell scripts, so the suite runs identically on
+/// Windows and Unix.
 fn write_claude_stub() -> StubScript {
-    // Mimic the first/last events the real `claude --output-format
-    // stream-json --verbose` emits, with two assistant tokens and a
-    // final result.
-    let lines = r##"{"type":"system","subtype":"init","session_id":"00000000-0000-4000-8000-000000000001","model":"stub"}
+    static STUB: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    let path = STUB.get_or_init(|| {
+        let lines = r##"{"type":"system","subtype":"init","session_id":"00000000-0000-4000-8000-000000000001","model":"stub"}
 {"type":"assistant","message":{"content":[{"type":"text","text":"two"}]},"session_id":"00000000-0000-4000-8000-000000000001"}
 {"type":"assistant","message":{"content":[{"type":"text","text":" tokens"}]},"session_id":"00000000-0000-4000-8000-000000000001"}
 {"type":"result","subtype":"success","is_error":false,"result":"two tokens","session_id":"00000000-0000-4000-8000-000000000001"}
 {"type":"system","subtype":"session_state_changed","state":"idle","session_id":"00000000-0000-4000-8000-000000000001"}"##;
+        // `write_all` instead of `print!` — the JSON braces in the
+        // payload must not be parsed as format placeholders.
+        let source = format!(
+            "fn main() {{\n    use std::io::Write as _;\n    std::io::stdout()\n        .write_all(r##\"{lines}\n\"##.as_bytes())\n        .unwrap();\n}}\n"
+        );
 
-    let dir = tempfile::TempDir::new().unwrap();
-    let path = dir.path().join("claude-stub.sh");
-    let script = format!("#!/usr/bin/env bash\nset -e\ncat <<'EOF'\n{lines}\nEOF\n");
-    std::fs::write(&path, script).unwrap();
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = std::fs::metadata(&path).unwrap().permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(&path, perms).unwrap();
-    }
-    StubScript { _dir: dir, path }
+        let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
+        let src = dir.join("claude_stub.rs");
+        let exe = dir.join(if cfg!(windows) {
+            "claude_stub.exe"
+        } else {
+            "claude_stub"
+        });
+        std::fs::write(&src, source).expect("write stub source");
+        let out = std::process::Command::new("rustc")
+            .arg("--edition")
+            .arg("2021")
+            .arg("-o")
+            .arg(&exe)
+            .arg(&src)
+            .output()
+            .expect("rustc must be present alongside cargo");
+        assert!(
+            out.status.success(),
+            "stub compilation failed: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        exe
+    });
+    StubScript { path: path.clone() } // clone: OnceLock owns the canonical path; each caller gets its own handle
 }
 
 /// Minimal SSE parser tailored to the adapter SDK's wire format —

@@ -1,7 +1,18 @@
 //! Backpressure / flow-control types for streamed intents.
+//!
+//! Wire shape (v0.7): the adapter's SSE stream carries an
+//! `event: backpressure` with `data: {"signal": "slow-down" | "halt"}`
+//! whenever the signal *changes* from the previous state. `continue`
+//! is the implicit initial state and is never sent. `halt` terminates
+//! the stream — no further chunks and no `end` event follow it, and
+//! consumers surface it as a typed error rather than a clean finish.
+//! Clients that predate this event ignore it per SSE convention.
+
+use serde::{Deserialize, Serialize};
 
 /// A flow-control signal embedded in each chunk of a streamed intent.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum BackpressureSignal {
     /// Normal pace — the consumer should continue reading.
     #[default]

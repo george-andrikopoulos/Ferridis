@@ -416,9 +416,12 @@ impl Client {
         // Pipe the bytes through the existing SSE parser and re-shape
         // the events into a stream of `Result<Value, ClientError>`:
         //
-        //   event: chunk → yield Ok(data)
-        //   event: end   → end the stream
-        //   event: error → yield one Err(_) then end
+        //   event: chunk        → yield Ok(data)
+        //   event: end          → end the stream
+        //   event: error        → yield one Err(_) then end
+        //   event: backpressure → honor the flow-control signal:
+        //                         slow-down is advisory (logged);
+        //                         halt yields Err(StreamHalted) and ends
         //   (anything else: silently skipped per the SSE spec)
         use futures_util::StreamExt;
         let stream_url = url.clone();
@@ -448,11 +451,44 @@ impl Client {
                                 other => other.to_string(),
                             };
                             yield Err(ClientError::InvalidArgs {
-                                capability: cap_for_err.clone(),
-                                intent: intent_for_err.clone(),
+                                capability: cap_for_err.clone(), // clone: error owns the ref; the stream closure keeps its copy
+                                intent: intent_for_err.clone(), // clone: error owns the verb; the stream closure keeps its copy
                                 details: format!("adapter signalled stream error: {details}"),
                             });
                             break;
+                        }
+                        "backpressure" => {
+                            use serde::Deserialize as _;
+                            let signal = ev
+                                .data
+                                .get("signal")
+                                .and_then(|v| {
+                                    ferridis_protocol::BackpressureSignal::deserialize(v).ok()
+                                })
+                                .unwrap_or_default();
+                            match signal {
+                                ferridis_protocol::BackpressureSignal::Halt => {
+                                    // Deliberate flow-control stop: the
+                                    // adapter is overwhelmed and has
+                                    // terminated the stream.
+                                    yield Err(ClientError::StreamHalted {
+                                        capability: cap_for_err.clone(), // clone: error owns the ref; the stream closure keeps its copy
+                                        intent: intent_for_err.clone(), // clone: error owns the verb; the stream closure keeps its copy
+                                    });
+                                    break;
+                                }
+                                ferridis_protocol::BackpressureSignal::SlowDown => {
+                                    // Advisory only in this API: surface
+                                    // it to operators; a rate-limiting
+                                    // consumer belongs at the caller.
+                                    tracing::debug!(
+                                        capability = %cap_for_err,
+                                        intent = %intent_for_err,
+                                        "adapter signalled slow-down on streamed intent"
+                                    );
+                                }
+                                ferridis_protocol::BackpressureSignal::Continue => {}
+                            }
                         }
                         _ => {
                             // Unknown event name — per SSE convention,

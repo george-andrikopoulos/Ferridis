@@ -6,6 +6,8 @@ use async_trait::async_trait;
 use ferridis_core::{IntentVerb, Manifest};
 use futures_util::Stream;
 
+use ferridis_protocol::StreamChunk;
+
 use crate::dispatch::DispatchError;
 
 /// One item from a streamed dispatch — either a successful chunk or
@@ -17,6 +19,15 @@ pub type StreamItem = Result<serde_json::Value, DispatchError>;
 /// return types can't be `impl Trait` directly without breaking
 /// object safety.
 pub type IntentStream = Pin<Box<dyn Stream<Item = StreamItem> + Send>>;
+
+/// One item from a flow-aware streamed dispatch: a [`StreamChunk`]
+/// (payload plus [`ferridis_protocol::BackpressureSignal`]) or a typed
+/// dispatch failure that terminates the stream early.
+pub type FlowStreamItem = Result<StreamChunk, DispatchError>;
+
+/// A boxed, pinned, `Send` stream of [`FlowStreamItem`]s. Returned by
+/// [`Capability::dispatch_stream_flow`].
+pub type FlowIntentStream = Pin<Box<dyn Stream<Item = FlowStreamItem> + Send>>;
 
 /// How the SDK should source the OpenAPI / AsyncAPI schema document.
 ///
@@ -124,6 +135,27 @@ pub trait Capability: Send + Sync + 'static {
         intent: &IntentVerb,
         _body: serde_json::Value,
     ) -> Result<IntentStream, DispatchError> {
-        Err(DispatchError::UnsupportedIntent(intent.clone()))
+        Err(DispatchError::UnsupportedIntent(intent.clone())) // clone: error carries an owned verb
+    }
+
+    /// Flow-aware variant of [`Self::dispatch_stream`]: each chunk
+    /// carries a [`ferridis_protocol::BackpressureSignal`] alongside
+    /// its payload. The SDK routes stream-kind intents through *this*
+    /// method and emits an `event: backpressure` on the SSE wire
+    /// whenever the signal changes; a `Halt` terminates the stream.
+    ///
+    /// The default impl adapts [`Self::dispatch_stream`], tagging every
+    /// chunk `Continue` — existing adapters keep their exact behavior
+    /// without change. Override only when the adapter can meaningfully
+    /// signal `SlowDown` / `Halt` (e.g., a bounded internal queue).
+    async fn dispatch_stream_flow(
+        &self,
+        intent: &IntentVerb,
+        body: serde_json::Value,
+    ) -> Result<FlowIntentStream, DispatchError> {
+        let inner = self.dispatch_stream(intent, body).await?;
+        Ok(Box::pin(futures_util::StreamExt::map(inner, |item| {
+            item.map(StreamChunk::data_only)
+        })))
     }
 }

@@ -187,11 +187,11 @@ Every **NOTHING YET — exposed** entry in [FEATURES.md](./FEATURES.md) is a doc
 - [x] Client-side `EventChannelNotDeclared` rejection tests (2026-07-20) — `ferridis-client/tests/subscribe_channel_declaration.rs`, covers `subscribe` and `subscribe_ws`
 - [x] SSE reconnect resume-behavior e2e (2026-07-20) — `ferridis-protocol/tests/sse_resume.rs`: drop mid-feed, reconnect with cursor, no replay / no gap
 - [x] Broker self-registration heartbeat e2e (2026-07-20) — `BrokerConfig::with_heartbeat_interval` added (default 240 s unchanged); `ferridis-adapter-sdk/tests/broker_heartbeat.rs`: re-register within interval, abort-on-drop stops, pinned never heartbeats
-- [ ] Tier-used logging capture test (assert the `tracing::info!` emission on dispatch)
+- [x] Tier-used logging capture test (2026-07-20) — `ferridis-client/tests/tier_logging.rs` captures real tracing output through a real dispatch and asserts capability/intent/tier fields
 - [x] HTTP pool-hardening — **accepted as config-constant-only** (2026-07-20): reqwest exposes no pool-state readback; constants public with rationale doc-comments
 - [ ] Editor-extension automated tests (VS Code TS extension, Zed WASM extension) — currently manual verification only
 - [x] Property-based tests (2026-07-20) — `proptest` added; `ferridis-core/tests/prop_parsers.rs` (8 properties: IntentVerb, CapabilityVersion, CapabilityRef) + `ferridis-protocol/tests/prop_sse.rs` (3 properties: chunk-boundary invariance, field fidelity, CRLF≡LF). A whole-`Manifest`-document generator remains a candidate follow-up.
-- [ ] Wire `BackpressureSignal` / `StreamChunk` into the live streaming path + clean cancellation message for streamed intents (types shipped v0.4, unwired)
+- [x] **Backpressure wired end-to-end + cancellation propagation (v0.7, 2026-07-20)** — `Capability::dispatch_stream_flow` (default adapts `dispatch_stream`, existing adapters untouched); SDK emits `event: backpressure {"signal": …}` on state change, `Halt` terminates the stream; client surfaces halt as typed `ClientError::StreamHalted`, slow-down via tracing; wire is additive (pre-v0.7 clients ignore the event per SSE convention). Cancellation: consumer drop provably drops the adapter's intent stream (`consumer_drop_reaches_the_adapter_stream_drop`). Tests: client `backpressure_flow.rs`, sdk `stream_cancellation.rs` (wire-shape pin included).
 - [x] `mcp_consumer` interop self-test made platform-correct (2026-07-20) — binary located beside the test executable (honors `CARGO_TARGET_DIR`, platform exe suffix); previously hardcoded a Unix `target/release` path and failed on Windows
 
 ## Open design questions

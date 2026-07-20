@@ -23,6 +23,7 @@ use axum::response::sse::{Event as SseEvent, KeepAlive, Sse};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use ferridis_core::{IntentKind, IntentVerb};
+use ferridis_protocol::BackpressureSignal;
 use futures_util::StreamExt;
 use std::convert::Infallible;
 use std::time::Duration;
@@ -240,7 +241,7 @@ async fn dispatch_stream_intent(
     // those failures as a one-shot SSE response carrying a single
     // `error` event, rather than degrading to JSON — the client is
     // already in SSE-decoding mode.
-    let stream_result = cap.dispatch_stream(&verb, body).await;
+    let stream_result = cap.dispatch_stream_flow(&verb, body).await;
     let inner_stream = match stream_result {
         Ok(s) => s,
         Err(e) => {
@@ -262,28 +263,59 @@ async fn dispatch_stream_intent(
         }
     };
 
-    // Map the adapter's stream-of-results into an SSE stream-of-events.
-    let events = inner_stream
-        .map(|item| match item {
-            Ok(value) => Ok::<SseEvent, Infallible>(
-                SseEvent::default()
-                    .event("chunk")
-                    .data(serde_json::to_string(&value).unwrap_or_else(|_| String::from("null"))),
-            ),
-            Err(e) => Ok(SseEvent::default().event("error").data(
-                serde_json::to_string(&serde_json::json!({
-                    "status": e.status_code(),
-                    "message": e.to_string(),
-                }))
-                .unwrap_or_else(|_| String::from("\"adapter error\"")),
-            )),
-        })
-        // After the adapter's stream is exhausted, append a final
-        // `event: end` so the consumer-side parser knows it's a
-        // clean termination, not a dropped connection.
-        .chain(futures_util::stream::once(async {
-            Ok::<SseEvent, Infallible>(SseEvent::default().event("end").data("{}"))
-        }));
+    // Map the adapter's flow-aware stream into an SSE stream-of-events.
+    //
+    // Backpressure wiring (v0.7): the signal travels as a separate
+    // `event: backpressure` emitted only when it *changes* from the
+    // previous state (`Continue` is the implicit start, never sent —
+    // pre-v0.7 clients ignore the event per SSE convention). `Halt`
+    // terminates the stream: the halt event is the last thing sent, no
+    // trailing `end`, so consumers see a deliberate stop rather than a
+    // clean finish.
+    let events = async_stream::stream! {
+        let mut inner = inner_stream;
+        let mut current_signal = BackpressureSignal::Continue;
+        while let Some(item) = inner.next().await {
+            match item {
+                Ok(chunk) => {
+                    let signal = chunk.signal();
+                    if signal != current_signal {
+                        current_signal = signal;
+                        yield Ok::<SseEvent, Infallible>(
+                            SseEvent::default().event("backpressure").data(
+                                serde_json::to_string(&serde_json::json!({"signal": signal}))
+                                    .unwrap_or_else(|_| String::from("{\"signal\":\"halt\"}")),
+                            ),
+                        );
+                    }
+                    if signal == BackpressureSignal::Halt {
+                        // The adapter declared itself overwhelmed; the
+                        // chunk that carried the halt is NOT delivered —
+                        // halt means "stop", not "one more".
+                        return;
+                    }
+                    yield Ok(SseEvent::default().event("chunk").data(
+                        serde_json::to_string(chunk.data())
+                            .unwrap_or_else(|_| String::from("null")),
+                    ));
+                }
+                Err(e) => {
+                    yield Ok(SseEvent::default().event("error").data(
+                        serde_json::to_string(&serde_json::json!({
+                            "status": e.status_code(),
+                            "message": e.to_string(),
+                        }))
+                        .unwrap_or_else(|_| String::from("\"adapter error\"")),
+                    ));
+                    return;
+                }
+            }
+        }
+        // Natural exhaustion: a final `event: end` so the consumer-side
+        // parser knows it's a clean termination, not a dropped
+        // connection.
+        yield Ok(SseEvent::default().event("end").data("{}"));
+    };
 
     Sse::new(events)
         .keep_alive(KeepAlive::new().interval(Duration::from_secs(60)))

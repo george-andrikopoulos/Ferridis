@@ -42,9 +42,12 @@ pub use broker::{
     AdapterUrl, AdapterUrlError, BrokerConfig, BrokerError, BrokerRegistration, BrokerUrl,
     BrokerUrlError, RegistrationPersistence, ServiceKind, ServiceName, ServiceNameError,
 };
-pub use capability::{Capability, IntentStream, SchemaSource, StreamItem};
+pub use capability::{
+    Capability, FlowIntentStream, FlowStreamItem, IntentStream, SchemaSource, StreamItem,
+};
 pub use dispatch::DispatchError;
 pub use events::{Event, EventPublisher, WebhookPublisher};
+pub use ferridis_protocol::{BackpressureSignal, StreamChunk};
 pub use server::AdapterServer;
 pub use validation::{ValidationError, ValidationOutcome, validate_body};
 pub use ws_handler::{WsConnId, WsHandler, WsMessage};
