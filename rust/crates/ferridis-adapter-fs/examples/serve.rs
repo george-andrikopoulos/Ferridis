@@ -1,7 +1,7 @@
 //! Stand up a `ferridis-adapter-fs` instance on a chosen address.
 //!
 //! ```bash
-//! cargo run --release -p ferridis-adapter-fs --example serve -- \
+//! cargo run --release -p ferridis-adapter-fs --example serve-fs -- \
 //!     --root /path/to/exposed/dir \
 //!     --bind 127.0.0.1:7821 \
 //!     [--discovery-broker http://127.0.0.1:7825] \

@@ -1,7 +1,7 @@
 //! Run the Slack adapter as a standalone HTTP server.
 //!
 //! ```bash
-//! SLACK_BOT_TOKEN=xoxb-... cargo run -p ferridis-adapter-slack --example serve
+//! SLACK_BOT_TOKEN=xoxb-... cargo run -p ferridis-adapter-slack --example serve-slack
 //! ```
 
 use ferridis_adapter_sdk::AdapterServer;

@@ -32,5 +32,5 @@ bytes = { workspace = true }
 tracing-subscriber = { workspace = true }
 
 [[example]]
-name = "serve"
+name = "serve-claude-cli"
 path = "examples/serve.rs"

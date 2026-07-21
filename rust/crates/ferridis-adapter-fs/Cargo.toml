@@ -28,3 +28,10 @@ reqwest = { workspace = true }
 axum = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+
+# Unique target name so the example does not collide with the other adapters'
+# `serve` examples on a workspace-wide build (cargo issue #6313 — same output
+# filename is a hard error on Windows link.exe).
+[[example]]
+name = "serve-fs"
+path = "examples/serve.rs"

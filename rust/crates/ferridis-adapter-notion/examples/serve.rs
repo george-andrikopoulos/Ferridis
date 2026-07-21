@@ -1,7 +1,7 @@
 //! Run the Notion adapter as a standalone HTTP server.
 //!
 //! ```bash
-//! NOTION_INTEGRATION_TOKEN=secret_... cargo run -p ferridis-adapter-notion --example serve
+//! NOTION_INTEGRATION_TOKEN=secret_... cargo run -p ferridis-adapter-notion --example serve-notion
 //! ```
 
 use ferridis_adapter_notion::{IntegrationToken, NotionCapability};

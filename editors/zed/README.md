@@ -42,7 +42,7 @@ any subprocess (using Zed's `HttpClient`) is queued for a future version.
   EOF
   ```
 - A running Ferridis adapter on the configured port (the filesystem
-  reference adapter via `cargo run --release -p ferridis-adapter-fs --example serve`).
+  reference adapter via `cargo run --release -p ferridis-adapter-fs --example serve-fs`).
 
 ## Install as a dev extension
 

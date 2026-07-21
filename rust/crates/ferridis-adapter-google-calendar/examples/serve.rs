@@ -4,14 +4,14 @@
 //!
 //! ```bash
 //! # Minimal — access token only (expires after ~1 hour)
-//! GOOGLE_CALENDAR_TOKEN=ya29.xxx cargo run -p ferridis-adapter-google-calendar --example serve
+//! GOOGLE_CALENDAR_TOKEN=ya29.xxx cargo run -p ferridis-adapter-google-calendar --example serve-gcal
 //!
 //! # With OAuth refresh credentials for automatic token renewal
 //! GOOGLE_CALENDAR_TOKEN=ya29.xxx \
 //! GOOGLE_OAUTH_REFRESH_TOKEN=1//xxx \
 //! GOOGLE_OAUTH_CLIENT_ID=xxx.apps.googleusercontent.com \
 //! GOOGLE_OAUTH_CLIENT_SECRET=xxx \
-//!   cargo run -p ferridis-adapter-google-calendar --example serve
+//!   cargo run -p ferridis-adapter-google-calendar --example serve-gcal
 //! ```
 
 use ferridis_adapter_google_calendar::{

@@ -132,7 +132,7 @@ Drives the `claude` CLI (Claude Code) as a stream-kind Ferridis capability — t
 
 **Demo path**:
 1. `cargo build --release -p ferridis-cli` — binary at `rust/target/release/ferridis-cli`.
-2. `cargo run --release -p ferridis-adapter-fs --example serve -- --root /tmp/ferridis-demo --bind 127.0.0.1:7821` — spins the adapter.
+2. `cargo run --release -p ferridis-adapter-fs --example serve-fs -- --root /tmp/ferridis-demo --bind 127.0.0.1:7821` — spins the adapter.
 3. `code --install-extension editors/vscode/ferridis.vsix`
 4. In VS Code Settings (JSON), set `ferridis.cliPath` to the absolute path of the release binary, and add the adapter to `ferridis.adapters`:
    ```jsonc

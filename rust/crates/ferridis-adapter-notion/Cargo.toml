@@ -26,3 +26,10 @@ axum = { workspace = true }
 tracing-subscriber = { workspace = true }
 wiremock = { workspace = true }
 serde_json = { workspace = true }
+
+# Unique target name so the example does not collide with the other adapters'
+# `serve` examples on a workspace-wide build (cargo issue #6313 — same output
+# filename is a hard error on Windows link.exe).
+[[example]]
+name = "serve-notion"
+path = "examples/serve.rs"

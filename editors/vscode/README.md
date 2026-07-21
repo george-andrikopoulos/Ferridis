@@ -31,7 +31,7 @@ have configured; it does not replace existing MCP plumbing.
 - At least one running Ferridis adapter, e.g. the filesystem reference adapter:
 
   ```bash
-  cargo run --release -p ferridis-adapter-fs --example serve
+  cargo run --release -p ferridis-adapter-fs --example serve-fs
   ```
 
 ## Configure

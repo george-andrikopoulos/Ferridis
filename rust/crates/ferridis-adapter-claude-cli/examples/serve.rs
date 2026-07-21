@@ -4,7 +4,7 @@
 //! example dependency-free (no `clap`). Repeatable: `--allowed-cwd`.
 //!
 //! ```sh
-//! cargo run --example serve -p ferridis-adapter-claude-cli -- \
+//! cargo run --example serve-claude-cli -p ferridis-adapter-claude-cli -- \
 //!   --bind 127.0.0.1:7823 \
 //!   --allowed-cwd "$HOME/Documents/Claude/Projects/Ferridis" \
 //!   --default-cwd "$HOME/Documents/Claude/Projects/Ferridis" \

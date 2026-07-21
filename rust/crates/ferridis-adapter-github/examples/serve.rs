@@ -1,7 +1,7 @@
 //! Stand up a `ferridis-adapter-github` instance on a chosen address.
 //!
 //! ```bash
-//! cargo run --release -p ferridis-adapter-github --example serve -- \
+//! cargo run --release -p ferridis-adapter-github --example serve-github -- \
 //!     --token ghp_yourtoken \
 //!     --bind 127.0.0.1:7827 \
 //!     [--api-base-url https://github.example.com/api/v3] \

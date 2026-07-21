@@ -15,7 +15,7 @@ Both stream the CLI's `--output-format stream-json --verbose` events as ordered 
 
 ```sh
 cd rust
-cargo run --release --example serve -p ferridis-adapter-claude-cli -- \
+cargo run --release --example serve-claude-cli -p ferridis-adapter-claude-cli -- \
   --bind 127.0.0.1:7823 \
   --allowed-cwd "$HOME/your/project" \
   --default-cwd "$HOME/your/project" \
@@ -188,9 +188,9 @@ For a setup that survives logout / reboot, install one unit per process.
 
 ```sh
 cargo build --release --bin ferridis-mcp-server -p ferridis-mcp-server
-cargo build --release --example serve -p ferridis-adapter-claude-cli
+cargo build --release --example serve-claude-cli -p ferridis-adapter-claude-cli
 install -Dm755 rust/target/release/ferridis-mcp-server       ~/.local/bin/ferridis-mcp-server
-install -Dm755 rust/target/release/examples/serve            ~/.local/bin/ferridis-adapter-claude-cli
+install -Dm755 rust/target/release/examples/serve-claude-cli ~/.local/bin/ferridis-adapter-claude-cli
 ```
 
 **Mint and store secrets** in a `0600` env file (kept out of the unit body so they're never world-readable in `systemctl cat`):
