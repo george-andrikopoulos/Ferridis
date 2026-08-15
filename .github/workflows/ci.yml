@@ -28,7 +28,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Pin to the same channel as rust/rust-toolchain.toml (1.95.0) so the
       # clippy/rustfmt components install for the toolchain cargo actually uses;
       # pinning to `stable` would install them for the wrong toolchain.
