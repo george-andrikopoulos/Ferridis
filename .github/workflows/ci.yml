@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref so only the latest push is graded.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The Cargo workspace lives under rust/, not the repo root.
+defaults:
+  run:
+    working-directory: rust
+
+jobs:
+  check:
+    name: fmt · clippy · test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # A Windows-only or Linux-only break must stay visible even when the other
+      # OS is green — that divergence is the reason [R:xplat-fixtures] exists
+      # (its incident originated in this repo: three tests green on Linux, broken
+      # on Windows). One OS failing must never cancel the other's evidence.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      # Pin to the same channel as rust/rust-toolchain.toml (1.95.0) so the
+      # clippy/rustfmt components install for the toolchain cargo actually uses;
+      # pinning to `stable` would install them for the wrong toolchain.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.95.0"
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: rustfmt
+        run: cargo fmt --check
+      # --all-targets so the integration-test fixtures — where the
+      # [R:xplat-fixtures] breakage lived (mcp_consumer, claude-cli stub,
+      # AllowedCwd canonicalize) — are linted too, not only lib + bins.
+      - name: clippy (all targets, deny warnings)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: test
+        run: cargo test --workspace
