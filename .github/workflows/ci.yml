@@ -39,6 +39,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust
+      # keyring's sync-secret-service backend links libdbus-1 on Linux; the
+      # windows-native backend needs no such system lib, so this is Linux-only.
+      # (Changing the keyring feature is a runtime design choice, not a CI fix.)
+      - name: install libdbus (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
       - name: rustfmt
         run: cargo fmt --check
       # --all-targets so the integration-test fixtures — where the
